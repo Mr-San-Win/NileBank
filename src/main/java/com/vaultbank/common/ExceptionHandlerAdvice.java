@@ -26,7 +26,7 @@ public class ExceptionHandlerAdvice {
     ResponseEntity<ApiError> auth(){return ResponseEntity.status(401).body(ApiError.of(401,"Invalid email or password"));}
     @ExceptionHandler(DataIntegrityViolationException.class)
     ResponseEntity<ApiError> conflict(){return ResponseEntity.status(409).body(ApiError.of(409,"The operation conflicts with existing data"));}
-    @ExceptionHandler({HttpMessageNotReadableException.class,MethodArgumentTypeMismatchException.class,ConstraintViolationException.class})
+    @ExceptionHandler({HttpMessageNotReadableException.class,MethodArgumentTypeMismatchException.class,ConstraintViolationException.class,org.springframework.web.bind.ServletRequestBindingException.class})
     ResponseEntity<ApiError> malformed(){return ResponseEntity.badRequest().body(ApiError.of(400,"Invalid request"));}
     @ExceptionHandler(PessimisticLockingFailureException.class)
     ResponseEntity<ApiError> busy(){return ResponseEntity.status(409).body(ApiError.of(409,"Account busy; please retry the operation"));}

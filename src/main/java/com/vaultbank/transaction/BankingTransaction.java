@@ -16,6 +16,8 @@ public class BankingTransaction {
     @ManyToOne(fetch=FetchType.LAZY) @JoinColumn(name="destination_id") private BankAccount destination;
     @Column(nullable=false,unique=true,length=40) private String reference;
     @Column(nullable=false) private Instant createdAt;
+    @Column(length=100) private String idempotencyKey;
+    public void setIdempotencyKey(String key){this.idempotencyKey=key;}
     protected BankingTransaction(){}
     public BankingTransaction(Type type,BigDecimal amount,BankAccount source,BankAccount destination){
         id=UUID.randomUUID();this.type=type;this.amount=amount;this.source=source;this.destination=destination;

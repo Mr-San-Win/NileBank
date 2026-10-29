@@ -20,5 +20,11 @@
 ## Milestone 3 — completed
 - One zero-balance account per owner; service ownership checks; simulated deposits, withdrawals, paginated history, fixed-precision limits, frozen-account checks and PostgreSQL write locks.
 - Executed `mvn -B test`: 16 tests, 0 failures/errors/skips. Twelve simultaneous 80 THB withdrawals from 100 THB produced exactly one success and a 20 THB balance. Invalid values and unauthorized operations did not change balances.
+- Commit: `2e818c2bed8bbfb88360777d4334a023b4b46e19`. Push blocked by unauthenticated CLI/no remote.
+
+## Milestone 4 — completed
+- Atomic transfers with deterministic UUID lock ordering; scalar pre-lock lookups avoid stale managed balance snapshots. Sender-scoped idempotency keys persist in the same transaction under a database unique constraint.
+- First `mvn -B test`: 24 tests, 1 failure: missing Idempotency-Key returned 500. Added binding-error mapping to 400 and reran the unchanged tests.
+- Retest: 24 tests, 0 failures/errors/skips, BUILD SUCCESS. Covered rollback after sender debit, same-key concurrent replay, changed-payload conflict, 16 opposing transfers preserving total, and mixed simultaneous transfers/withdrawals.
 - Commit hash recorded after creation. Push blocked by unauthenticated CLI/no remote.
 
