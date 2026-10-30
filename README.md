@@ -32,11 +32,11 @@ Java 21 · Spring Boot 3.5.16 · Maven 3.9.11 wrapper · Spring MVC/Data JPA/Sec
 
 Requires Git, Docker Desktop or Docker Engine with Compose, a running Linux container engine, internet access for the first image/dependency download and exchange rates, and a free localhost port 8080. Run the commands below from the repository root.
 
-Clone the application branch (until its pull request is merged into main):
+Clone the default branch:
 
 ```bash
-git clone --branch refactor/fullstack-monorepo https://github.com/Mr-San-Win/NileBank..git nilebank
-cd nilebank
+git clone https://github.com/Mr-San-Win/NileBank.git
+cd NileBank
 ```
 
 1. Copy the example configuration:

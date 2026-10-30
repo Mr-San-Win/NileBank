@@ -30,4 +30,4 @@ The transient provider failure is an existing operational limitation: new quotes
 
 ## Repository integration
 
-The recreated repository's initial main commit is preserved as an ancestor of the refactor branch. Its LICENSE was retained, and the one-line README was combined with the existing application documentation by retaining the complete project README. Main is not updated automatically; the refactor is proposed through a pull request. No force-push or historical commit rewrite is required.
+The recreated repository's initial main commit is preserved as an ancestor of the refactor branch. Its LICENSE was retained, and the one-line README was combined with the existing application documentation by retaining the complete project README. The refactor and subsequent documentation cleanup were merged into main through pull requests #1 and #2. Main is the default branch and contains the complete application. No force-push or historical commit rewrite was used.
