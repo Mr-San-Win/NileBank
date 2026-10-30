@@ -14,7 +14,7 @@ services:
       retries: 20
   app:
     build: .
-    ports: ["8080:8080"]
+    ports: ["127.0.0.1:8080:8080"]
     environment:
       DB_URL: jdbc:postgresql://db:5432/vaultbank
       DB_USER: ${DB_USER:-vaultbank}
