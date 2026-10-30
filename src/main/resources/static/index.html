@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="VaultBank is an educational digital banking simulator. All money is simulated.">
+<title>VaultBank · Digital Banking Simulator</title>
+<link rel="icon" href="data:,"><link rel="stylesheet" href="/styles.css">
+<script type="module" src="/app.js"></script>
+</head>
+<body>
+<div class="demo-strip"><span class="demo-dot"></span> DEMO ENVIRONMENT <span class="strip-divider">/</span> Simulated money. Real learning.</div>
+<div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+<main id="auth-view" class="auth-layout">
+  <section class="auth-story">
+    <a class="brand" href="/" aria-label="VaultBank home"><span class="brand-icon">V</span> VaultBank<span class="brand-dot">.</span></a>
+    <div class="story-content"><span class="eyebrow">YOUR NEXT CHAPTER</span><h1>A smarter space<br>for your money<span>.</span></h1><p>Explore everyday banking in a safe, simulated environment. Your first step starts here.</p>
+    <div class="story-card"><span class="small-label">BUILT FOR EXPLORING</span><div class="story-amount">Limitless learning.</div><div class="story-card-footer"><span>VIRTUAL ACCOUNT</span><span>THB ↗</span></div></div>
+    <div class="story-points"><span>✓ Simulated THB</span><span>✓ No real payments</span><span>✓ No bank details needed</span></div></div>
+    <p class="story-footer">A digital banking simulator, built with care.</p>
+  </section>
+  <section class="auth-panel"><div class="auth-form-wrap">
+    <div class="section-kicker">WELCOME TO VAULTBANK</div>
+    <h2 id="auth-heading">Welcome back.</h2><p id="auth-description" class="muted">Sign in to your personal demo account.</p>
+    <div class="auth-tabs" role="group" aria-label="Authentication mode"><button id="login-tab" class="selected" type="button">Sign in</button><button id="register-tab" type="button">Create account</button></div>
+    <form id="auth-form">
+      <div id="name-field" hidden><label for="full-name">Full name</label><input id="full-name" name="fullName" autocomplete="name" maxlength="100" placeholder="Your name"></div>
+      <label for="email">Email address</label><input id="email" name="email" type="email" autocomplete="username" maxlength="254" required placeholder="you@example.com">
+      <label for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" maxlength="72" required placeholder="Enter your password">
+      <p id="password-help" class="field-help" hidden>Use 12–72 characters (maximum 72 UTF-8 bytes).</p>
+      <div id="auth-error" class="form-error" role="alert" hidden></div>
+      <button id="auth-submit" class="primary full-width" type="submit">Sign in to VaultBank <span aria-hidden="true">↗</span></button>
+    </form>
+    <p class="auth-disclaimer">For demonstration and education only. Use a fictional name and a demo password. Never enter real banking information.</p>
+  </div></section>
+</main>
+<div id="bank-view" class="bank-layout" hidden>
+  <aside class="sidebar">
+    <a class="brand" href="/"><span class="brand-icon">V</span> VaultBank<span class="brand-dot">.</span></a>
+    <div class="nav-label">WORKSPACE</div>
+    <nav aria-label="Main navigation">
+      <button class="nav-item active" data-view="overview"><span aria-hidden="true">▦</span> Overview</button>
+      <button class="nav-item" data-view="transfer"><span aria-hidden="true">⇄</span> Transfer money</button>
+      <button class="nav-item" data-view="history"><span aria-hidden="true">◷</span> Transactions</button>
+      <button class="nav-item" data-view="profile"><span aria-hidden="true">◉</span> Account details</button>
+    </nav>
+    <div class="sidebar-bottom"><div class="sandbox-card"><span class="sandbox-icon">◇</span><strong>Your banking sandbox</strong><p>Every balance is virtual.<br>Every experience is yours.</p><span class="sandbox-badge">SIMULATED MONEY</span></div>
+    <button id="logout" class="nav-item"><span aria-hidden="true">↪</span> Sign out</button></div>
+  </aside>
+  <div class="bank-main">
+    <header class="topbar"><div class="breadcrumb">Personal banking <span>/</span> <strong id="breadcrumb-current">Overview</strong></div><div class="user-chip"><span class="live-dot"></span><span id="user-name"></span><span id="avatar" class="avatar"></span></div></header>
+    <main class="workspace">
+      <section id="overview-view" class="view">
+        <div class="page-heading"><div><div class="section-kicker">YOUR MONEY, AT A GLANCE</div><h1 id="greeting">Welcome back.</h1><p class="muted">A clear view of your everyday banking.</p></div><span class="environment-pill"><span class="live-dot"></span> Demo account</span></div>
+        <div id="no-account" class="empty-account panel" hidden><span class="large-symbol">◇</span><h2>Make room for possibilities.</h2><p class="muted">Create your free virtual THB account to start exploring.</p><button id="create-account" class="primary">Create virtual account ↗</button></div>
+        <div id="account-dashboard" hidden>
+          <div class="dashboard-grid">
+            <section class="balance-card"><div class="balance-top"><span>AVAILABLE BALANCE</span><span id="account-status" class="balance-status">ACTIVE</span></div>
+              <div class="balance-amount"><span class="currency-symbol">฿</span><span id="balance">—</span><span class="currency-code">THB</span></div>
+              <div class="account-label">VAULTBANK VIRTUAL ACCOUNT</div><div class="balance-bottom"><span id="account-number" class="account-number"></span><button id="copy-number" class="copy-button" aria-label="Copy account number">Copy ↗</button></div>
+              <div class="balance-watermark" aria-hidden="true">V</div>
+            </section>
+            <section class="panel quick-actions"><div class="panel-title"><h2>Move money</h2><span class="subtle-icon">↗</span></div><p class="muted">Everyday essentials, one tap away.</p>
+              <div class="action-grid"><button data-action="deposit"><span class="action-icon">↓</span><strong>Deposit</strong><small>Add demo funds</small></button><button data-action="withdraw"><span class="action-icon">↑</span><strong>Withdraw</strong><small>Take funds out</small></button><button data-view="transfer"><span class="action-icon blue">⇄</span><strong>Transfer</strong><small>Send to VaultBank</small></button></div>
+            </section>
+          </div>
+          <section class="panel activity-panel"><div class="panel-title"><div><h2>Recent activity</h2><p class="muted">Your latest money movements.</p></div><button class="text-button" data-view="history">View all transactions ↗</button></div><div id="recent-transactions"></div></section>
+          <div class="demo-footnote"><span>◇</span><p><strong>A safe space to explore.</strong> Deposits, withdrawals, and transfers use simulated money. No real financial services are connected.</p></div>
+        </div>
+      </section>
+      <section id="transfer-view" class="view" hidden>
+        <div class="page-heading"><div><div class="section-kicker">MOVE WITH CONFIDENCE</div><h1>Transfer money.</h1><p class="muted">Send simulated THB to another VaultBank account.</p></div></div>
+        <div class="form-layout"><section class="panel form-panel"><h2>A little closer. In a few steps.</h2>
+          <form id="transfer-form"><label for="recipient">Recipient account number</label><input id="recipient" required pattern="VB[A-Fa-f0-9]{20}" maxlength="22" autocomplete="off" placeholder="VB followed by 20 characters"><p class="field-help">Ask another demo user for their VaultBank account number.</p>
+          <label for="transfer-amount">Amount (THB)</label><input id="transfer-amount" type="text" inputmode="decimal" required pattern="[0-9]+([.][0-9]{1,2})?" placeholder="0.00" aria-describedby="transfer-limit"><p id="transfer-limit" class="field-help">฿0.01–฿1,000,000.00 per operation.</p>
+          <div id="transfer-error" class="form-error" role="alert" hidden></div><button class="primary full-width" type="submit">Review transfer ↗</button></form>
+        </section><aside class="panel help-panel"><span class="large-symbol">⇄</span><h2>Simple. Simulated. Secure.</h2><p>Transfers happen only between VaultBank demo accounts. Review the account number and amount carefully before confirming.</p><p>A unique request reference prevents a retried transfer from moving money twice.</p></aside></div>
+      </section>
+      <section id="history-view" class="view" hidden><div class="page-heading"><div><div class="section-kicker">THE FULL PICTURE</div><h1>Transactions.</h1><p class="muted">Every successful movement, in one place.</p></div><button id="refresh-history" class="secondary">Refresh ↻</button></div><section class="panel"><div id="all-transactions"></div><div class="pagination"><button id="previous-page" class="secondary">← Previous</button><span id="page-label"></span><button id="next-page" class="secondary">Next →</button></div></section></section>
+      <section id="profile-view" class="view" hidden><div class="page-heading"><div><div class="section-kicker">PERSONAL BANKING</div><h1>Account details.</h1><p class="muted">Your profile and virtual account.</p></div></div><section class="panel profile-panel"><h2>Your profile</h2><dl id="profile-details"></dl><div class="demo-footnote"><p>For your privacy, use fictional demo information. Passwords are never displayed or returned by the API.</p></div></section></section>
+    </main>
+    <footer class="bank-footer"><span>© VaultBank · Digital Banking Simulator</span><span>Educational project. All money is simulated.</span></footer>
+  </div>
+</div>
+<dialog id="money-dialog"><form id="money-form"><div class="dialog-heading"><span class="section-kicker">SIMULATED MONEY</span><button class="icon-button" type="button" id="close-money" aria-label="Close dialog">×</button></div><h2 id="money-heading">Deposit money</h2><p id="money-description" class="muted"></p><label for="money-amount">Amount (THB)</label><input id="money-amount" type="text" inputmode="decimal" required pattern="[0-9]+([.][0-9]{1,2})?" placeholder="0.00"><p class="field-help">฿0.01–฿1,000,000.00 · maximum 2 decimal places</p><div id="money-error" class="form-error" role="alert" hidden></div><button id="money-submit" class="primary full-width" type="submit">Confirm deposit</button></form></dialog>
+<dialog id="confirm-dialog"><div class="dialog-heading"><span class="section-kicker">ONE LAST LOOK</span><button id="close-confirm" class="icon-button" aria-label="Close confirmation">×</button></div><h2>Review your transfer.</h2><p class="muted">You are sending simulated money.</p><dl class="confirmation-details"><dt>To account</dt><dd id="confirm-recipient"></dd><dt>Amount</dt><dd id="confirm-amount"></dd><dt>Transfer fee</dt><dd>฿0.00</dd></dl><div id="confirm-error" class="form-error" role="alert" hidden></div><button id="confirm-transfer" class="primary full-width">Confirm transfer ↗</button></dialog>
+</body></html>

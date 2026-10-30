@@ -26,5 +26,12 @@
 - Atomic transfers with deterministic UUID lock ordering; scalar pre-lock lookups avoid stale managed balance snapshots. Sender-scoped idempotency keys persist in the same transaction under a database unique constraint.
 - First `mvn -B test`: 24 tests, 1 failure: missing Idempotency-Key returned 500. Added binding-error mapping to 400 and reran the unchanged tests.
 - Retest: 24 tests, 0 failures/errors/skips, BUILD SUCCESS. Covered rollback after sender debit, same-key concurrent replay, changed-payload conflict, 16 opposing transfers preserving total, and mixed simultaneous transfers/withdrawals.
-- Commit hash recorded after creation. Push blocked by unauthenticated CLI/no remote.
+- Commit: `5e0db8ec31d5882194f7bdebcc9f3d07b0a26acc`. Push blocked by unauthenticated CLI/no remote.
+
+## Milestone 5 — completed
+- Responsive HTML/CSS/ES module interface uses same-origin authenticated APIs. Registration, account onboarding, dashboard, deposit/withdrawal dialogs, reviewed transfers, paginated history, profile and logout implemented.
+- `mvn -B test package`: BUILD SUCCESS, 24 tests, 0 failures/errors/skips. `node --check src/main/resources/static/app.js` passed. Official Maven 3.9.11 wrapper generated.
+- Browser verified fictional users Alex Morgan and Jamie Taylor: registration/login, zero account, 12,500.50 deposit, 500.25 withdrawal, 2,000.25 transfer, sender 10,000.00 and recipient 2,000.25; histories show matching reference. Profile and logout verified. Desktop and 390px mobile layouts inspected; genuine screenshots saved in docs/screenshots.
+- Native Windows server needed explicit `jdk.net.unixdomain.tmpdir` due to host socket-path failure; startup succeeded with project-local directory. Docker build initially failed due to Maven Central connection refused; network diagnosis now succeeds and retry is running.
+- Commit hash recorded after creation. Push blocked by CLI authentication; connector is connected but has no repository-creation capability.
 
