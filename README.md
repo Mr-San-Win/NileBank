@@ -184,3 +184,9 @@ Potential improvements: rate limits and authentication abuse monitoring, recover
 ## Further reading
 
 [Architecture](docs/ARCHITECTURE.md) · [API](docs/API.md)
+
+## Author
+
+**San Win**  
+Software Engineering Student — KMITL, Thailand
+
