@@ -1,18 +1,20 @@
 # NileBank JSON API
 
-Base: `/api/v1`. Same-origin session cookie authentication. All money is simulated THB. Use fictional data.
+Base: `/api/v1`. Same-origin session cookie authentication. All money is simulated. Base banking uses THB; exchange wallets additionally support USD/EUR. Use fictional data.
 
 ## CSRF and session lifecycle
 
 1. GET `/auth/csrf` with a cookie-aware HTTP client.
 2. Response: `{"headerName":"X-CSRF-TOKEN","token":"<masked token>"}`.
-3. Include that header on every POST, even register/login/logout. Preserve the JSESSIONID cookie.
+3. Include that header on every state-changing request, including POST register/login/logout and DELETE tracker entries. Preserve the JSESSIONID cookie.
 4. After successful login, get a new CSRF token: login rotates the session identifier and invalidates the previous token.
 5. Logout is POST only, invalidates the session and clears the cookie.
 
 No bearer token, CORS exemption, or HTTP Basic authentication is used. Do not store passwords or authentication data in browser storage.
 
 ## Contracts
+
+Example credentials below are fictional test values, not a preloaded account or real password.
 
 ### POST /auth/register → 201
 
@@ -100,3 +102,8 @@ Executes a database query; database failure is an error rather than a false heal
 
 On 403, fetch a new CSRF token before submitting again. Do not automatically retry deposit/withdrawal after a lost response; check history. Transfers can be safely retried with their original key and exact parameters.
 
+
+
+## Current extensions
+
+See [currency exchange, fictional banks and finance tracking](EXTENSIONS.md) for the new schema, API, transaction guarantees, demonstration steps and limitations. The base account remains THB; foreign wallets support USD/EUR using real daily reference rates. Tracker entries and savings allocations are planning records separate from bank balances.

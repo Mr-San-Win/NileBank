@@ -1,25 +1,49 @@
-# Talking about NileBank
+# NileBank internship interview guide
 
-## Why Spring Boot and PostgreSQL?
-Spring Boot integrates HTTP, validation, security, persistence and testing with conventional configuration. PostgreSQL supplies fixed-precision decimals, constraints, transactions and row locks. A single application keeps the project understandable.
+Describe it honestly: “I built a Java/Spring Boot banking simulator with PostgreSQL, secure sessions, atomic transfers, real reference-rate simulated currency exchange, fictional partner banks and a manual finance tracker. It is educational software, not a real bank.” Be prepared to trace the code and explain a test, rather than claiming production banking experience.
 
-## Layers
-Controllers translate HTTP requests into validated DTOs. Services enforce ownership and banking rules and define transaction boundaries. Repositories load and persist entities. Keeping rules in services protects operations even when called outside an HTTP controller.
+## 1. A layered, same-origin monolith
 
-## Authentication
-A password is stored as an adaptive BCrypt hash, never plaintext. A successful login creates a server-side authenticated session. The browser receives an HTTP-only session cookie. State-changing requests also need a CSRF token, so an unrelated website cannot use the session cookie to submit banking commands.
+**Decision:** One Spring Boot app serves static ES modules and REST APIs. Controllers validate DTOs, services enforce ownership/business rules, and repositories persist records. PostgreSQL provides constraints and row locks; Flyway versions the schema.
 
-## Why BigDecimal?
-Binary floating-point cannot represent many decimal fractions exactly. BigDecimal with a two-decimal validation rule and PostgreSQL numeric(19,2) preserves THB amounts. Limits must be checked before persistence so the database cannot silently round invalid inputs.
+**How to explain it:** “A monolith was enough for the scope. It let me keep one deployment and one database transaction, without microservice coordination. Services keep business rules independent from the browser and HTTP controller.”
 
-## Transactions and atomicity
-`@Transactional` groups related database work: either all changes commit or all roll back. A transfer must debit the sender, credit the recipient and record history together. A transaction alone does not stop two requests from reading the same old balance.
+**Demonstrate:** Follow a withdrawal from its controller to its service, repository and history insert. Explain why hiding a button cannot enforce ownership. Tradeoff: this design does not independently scale each feature, but is simpler to understand and operate.
 
-## Race conditions
-A PostgreSQL write lock makes another writer wait before reading and changing the account. Transfers lock accounts in the same deterministic order to reduce deadlocks. Integration tests must exercise real PostgreSQL because an in-memory substitute can have different locking semantics.
+## 2. Server-side sessions, BCrypt and CSRF
 
-## Idempotency
-A client retries a transfer with the same unique key after a lost response. The server returns the stored original result without moving money again. Reusing a key with different parameters is an error. The key and balance changes must commit together.
+**Decision:** Spring Security authenticates with adaptive BCrypt hashes and server-side sessions. HTTP-only, SameSite cookies carry the session ID. The frontend fetches a CSRF token and sends it on mutations. Login rotates session identity and CSRF state; logout invalidates the session.
 
-## What a real bank needs
-A production financial system needs a carefully audited double-entry ledger, reconciliation, legal and regulatory controls, stronger identity verification, fraud detection, abuse controls, operational monitoring, disaster recovery, independent security review and much more. This portfolio simulator demonstrates selected engineering ideas; it does not implement those guarantees.
+**How to explain it:** “For a same-origin app, sessions avoid managing browser bearer tokens. A password hash is not encryption: we verify a supplied password against a deliberately expensive hash. CSRF protection matters because browsers attach cookies automatically.”
+
+**Demonstrate:** Show the unauthorized-access, invalid-login and missing-CSRF tests. Know the distinction between authentication (who you are), authorization (what you own/can do), and CSRF (whether a cookie-authenticated mutation came through the expected client flow). HTTPS and secure cookies are required beyond localhost.
+
+## 3. Exact money and explicit concurrency control
+
+**Decision:** BigDecimal and PostgreSQL numeric(19,2) represent amounts, with validation before storage. Monetary services lock account rows before reading/checking balances. Multi-account transfers acquire locks in deterministic UUID order.
+
+**How to explain it:** “Two concurrent withdrawals can both see sufficient funds unless their read/check/write steps serialize. @Transactional provides a transaction boundary; the row lock prevents both requests from approving against the same old balance. Ordered locks reduce deadlocks.”
+
+**Demonstrate:** Run the simultaneous-withdrawal test on real PostgreSQL and explain why H2 would not prove PostgreSQL locking behavior. Explain why binary floating-point is unsuitable for decimal money. API money is returned as strings to preserve precision in JavaScript. Tradeoff: contention makes writers wait, so this is correctness-focused rather than a throughput claim.
+
+## 4. Atomicity and retry-safe idempotency
+
+**Decision:** Debit, credit, immutable history and the idempotency record commit together. Keys are scoped to an account/source, protected by uniqueness, and compared with the original payload. Matching repeats return the original result; changed payloads conflict. Failed work rolls back, including the key.
+
+**How to explain it:** “Atomicity prevents half a transfer. Idempotency handles a different problem: the transfer succeeded but the client lost the response and retries. A transaction alone does not prevent a second valid request from moving money again.”
+
+**Demonstrate:** Show the recipient-capacity failure test that rolls back a sender debit, then the duplicate-key test that moves funds only once. Exchange uses a saved quote UUID; partner movements use a client key and saved result. Know the limitation: ordinary deposits/withdrawals are not idempotent, so ambiguous results need history inspection.
+
+## 5. Honest boundaries around external data and analysis
+
+**Decision:** Fetch real daily ECB reference rates through Frankfurter, expose publication/retrieval times, persist short-lived quotes, and fail new quotes when data is unavailable. Fetch before acquiring monetary locks. Partner banks remain fictional. Personal finance inputs and savings allocations are separate planning records.
+
+**How to explain it:** “External data can be stale or unavailable. Refresh means fetching the latest publication, not promising a new market price. A saved quote defines what the user confirmed. I keep network delays outside monetary locks and distinguish cash movement from income or spending.”
+
+**Demonstrate:** Refresh the rate screen, review a quote, confirm once, then inspect saved history. Explain the provider-validation and replay tests. Show a category budget insight and its arithmetic. Do not describe the rule-based insights as an AI predictor or savings allocations as reserved bank funds.
+
+## Before the interview
+
+Run `mvn verify` with Docker available and read the actual test output. Walk through registration, two-user transfer, exchange, fictional bank movement and an over-budget tracker entry. Explain one failure path and one concurrency test in your own words.
+
+A real financial system would need an independently designed double-entry ledger, reconciliation, identity/regulatory controls, abuse/fraud prevention, recovery/MFA, observability, disaster recovery and independent security review. NileBank has no real payment integration, public production deployment or proven performance benchmark. Being clear about these limits is part of good engineering.

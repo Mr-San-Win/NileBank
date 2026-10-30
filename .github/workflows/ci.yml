@@ -19,7 +19,9 @@ jobs:
       - name: Verify (PostgreSQL Testcontainers requires Docker)
         run: sh mvnw -B verify
       - name: Check JavaScript syntax
-        run: node --check src/main/resources/static/app.js
+        run: |
+          node --check src/main/resources/static/app.js
+          node --check src/main/resources/static/extensions.js
       - name: Build application image
         run: docker build -t nilebank:ci .
       - name: Preserve test evidence

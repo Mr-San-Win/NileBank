@@ -15,7 +15,11 @@ public record TransactionView(
     String sourceAccount,
     String destinationAccount,
     String reference,
-    Instant createdAt) {
+    Instant createdAt,
+    String currency,
+    String counterCurrency,
+    String counterAmount,
+    String description) {
   public static TransactionView of(BankingTransaction t, UUID accountId) {
     return new TransactionView(
         t.getId(),
@@ -26,6 +30,6 @@ public record TransactionView(
         t.getSource() == null ? null : t.getSource().getAccountNumber(),
         t.getDestination() == null ? null : t.getDestination().getAccountNumber(),
         t.getReference(),
-        t.getCreatedAt());
+        t.getCreatedAt(),t.getCurrency(),t.getCounterCurrency(),t.getCounterAmount()==null?null:t.getCounterAmount().toPlainString(),t.getDescription());
   }
 }

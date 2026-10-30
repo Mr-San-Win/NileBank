@@ -1,3 +1,4 @@
+import { createExtensions } from "./extensions.js";
 const $ = (selector) => document.querySelector(selector);
 const state = {
   user: null,
@@ -10,6 +11,7 @@ const state = {
   pending: null,
 };
 let noticeTimer;
+const extensions=createExtensions({api,notify,money,node,getUser:()=>state.user,getAccount:()=>state.account,onMoneyChanged:async()=>{await loadAccount();if(state.view==="overview")await loadHistory(true);}});
 
 class ApiError extends Error {
   constructor(message, status) {
@@ -174,6 +176,7 @@ function showAuth(message = "") {
   state.account = null;
   state.pending = null;
   state.csrf = null;
+  extensions.reset();
   document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
   $("#bank-view").hidden = true;
   $("#auth-view").hidden = false;
@@ -236,7 +239,7 @@ async function showBank() {
   await navigate("overview");
 }
 async function navigate(view) {
-  if (view === "transfer" && !state.account) {
+  if (["transfer","exchange","partners"].includes(view) && !state.account) {
     notify("Create your virtual account first.", true);
     view = "overview";
   }
@@ -255,6 +258,9 @@ async function navigate(view) {
     transfer: "Transfer money",
     history: "Transactions",
     profile: "Account details",
+    exchange: "Currency exchange",
+    partners: "Demo banks",
+    finance: "Finance tracker",
   }[view];
   if (view === "overview" && state.account) await loadHistory(true);
   if (view === "history") {
@@ -262,6 +268,7 @@ async function navigate(view) {
     await loadHistory();
   }
   if (view === "profile") updateProfile();
+  if (["exchange","partners","finance"].includes(view)) await extensions.open(view);
 }
 function renderHistory(target, transactions) {
   target.replaceChildren();
@@ -302,11 +309,14 @@ function renderHistory(target, transactions) {
       DEPOSIT: "Simulated deposit",
       WITHDRAWAL: "Withdrawal",
       TRANSFER: incoming ? "Transfer received" : "Transfer sent",
+      EXCHANGE: "Currency exchange",
+      BANK_IN: "Demo bank top-up",
+      BANK_OUT: "Demo bank transfer",
     };
     title.append(
       node(
         "span",
-        transaction.type === "TRANSFER" ? "⇄" : incoming ? "↓" : "↑",
+        ["TRANSFER","EXCHANGE"].includes(transaction.type) ? "⇄" : incoming ? "↓" : "↑",
         "transaction-symbol" + (incoming ? "" : " out"),
       ),
     );
@@ -319,7 +329,7 @@ function renderHistory(target, transactions) {
           ? incoming
             ? "From " + transaction.sourceAccount
             : "To " + transaction.destinationAccount
-          : "Virtual THB account",
+          : transaction.type === "EXCHANGE" ? "Received "+transaction.counterAmount+" "+transaction.counterCurrency : transaction.description || "Virtual THB account",
       ),
     );
     title.append(description);
@@ -338,7 +348,7 @@ function renderHistory(target, transactions) {
     row.append(
       node(
         "td",
-        (incoming ? "+" : "−") + " ฿" + money(transaction.amount),
+        (incoming ? "+" : "−") + " " + ({THB:"฿",USD:"$",EUR:"€"}[transaction.currency || "THB"]) + money(transaction.amount),
         "amount" + (incoming ? " in" : ""),
       ),
     );
@@ -605,4 +615,5 @@ async function init() {
     notify(error.message, true);
   }
 }
+extensions.init();
 init();

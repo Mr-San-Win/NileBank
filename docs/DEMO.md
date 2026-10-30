@@ -24,3 +24,8 @@ Show the code in TransferService and the PostgreSQL concurrency tests. Explain w
 - Session expires or app restarts: sign in again; persisted balances remain in PostgreSQL.
 - Lost monetary response: check history before repeating. Transfer retries must reuse the original idempotency key.
 
+
+
+## Current extensions
+
+See [currency exchange, fictional banks and finance tracking](EXTENSIONS.md) for the new schema, API, transaction guarantees, demonstration steps and limitations. The base account remains THB; foreign wallets support USD/EUR using real daily reference rates. Tracker entries and savings allocations are planning records separate from bank balances.

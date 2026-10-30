@@ -127,6 +127,9 @@
           <button class="nav-item" data-view="transfer">
             <span aria-hidden="true">⇄</span> Transfer money
           </button>
+          <button class="nav-item" data-view="exchange"><span aria-hidden="true">↔</span> Currency exchange</button>
+          <button class="nav-item" data-view="partners"><span aria-hidden="true">◇</span> Demo banks</button>
+          <button class="nav-item" data-view="finance"><span aria-hidden="true">▥</span> Finance tracker</button>
           <button class="nav-item" data-view="history">
             <span aria-hidden="true">◷</span> Transactions
           </button>
@@ -169,7 +172,8 @@
                 ><span class="live-dot"></span> Demo account</span
               >
             </div>
-            <div id="no-account" class="empty-account panel" hidden>
+            <div class="extension-links"><button data-view="exchange">Explore currency exchange ↗</button><button data-view="partners">Connect a demo bank ↗</button><button data-view="finance">Plan spending & savings ↗</button></div>
+<div id="no-account" class="empty-account panel" hidden>
               <span class="large-symbol">◇</span>
               <h2>Make room for possibilities.</h2>
               <p class="muted">
@@ -349,6 +353,39 @@
               </div>
             </section>
           </section>
+<section id="exchange-view" class="view" hidden>
+  <div class="page-heading"><div><div class="section-kicker">REAL REFERENCE RATES · SIMULATED MONEY</div><h1>Currency exchange.</h1><p class="muted">Keep THB, USD and EUR in your own virtual wallets.</p></div><button id="fx-refresh" class="secondary">Refresh rates ↻</button></div>
+  <div id="fx-wallets" class="summary-grid" aria-live="polite"></div>
+  <div class="feature-note"><strong>Real data, simulated exchange.</strong> Rates come from Frankfurter / the European Central Bank. They are published reference rates, not intraday trading prices. Refresh requests the latest publication. <a href="https://frankfurter.dev/" target="_blank" rel="noopener noreferrer">Source ↗</a></div>
+  <div id="fx-rate-status" class="rate-strip" role="status">Loading latest reference rates…</div>
+  <div class="form-layout"><section class="panel form-panel"><h2>Get a conversion quote</h2>
+    <form id="fx-form"><div class="field-pair"><div><label for="fx-from">From currency</label><select id="fx-from"><option>THB</option><option>USD</option><option>EUR</option></select></div><div><label for="fx-to">To currency</label><select id="fx-to"><option>USD</option><option>EUR</option><option>THB</option></select></div></div>
+    <label for="fx-amount">Amount to exchange</label><input id="fx-amount" type="text" inputmode="decimal" pattern="[0-9]+([.][0-9]{1,2})?" required placeholder="0.00"><p class="field-help">Maximum 1,000,000 THB equivalent. No fee. Quotes last 2 minutes.</p>
+    <div id="fx-error" class="form-error" role="alert" hidden></div><button id="fx-quote-button" class="primary full-width">Get latest quote ↗</button></form>
+    <div id="fx-review" class="review-panel" hidden><h3>Review your conversion</h3><dl id="fx-details"></dl><p id="fx-expiry" class="field-help"></p><button id="fx-confirm" class="primary full-width">Confirm simulated exchange</button></div>
+  </section><aside class="panel help-panel"><span class="large-symbol">↔</span><h2>Your money stays yours.</h2><p>A conversion moves simulated funds between your own wallets. It does not count as income or an expense in the finance tracker.</p><p>The applied rate, publication date and received amount are saved with your quote. Repeating an executed quote never converts money twice.</p><p>The received amount rounds down to two decimals; very small conversions may be rejected.</p></aside></div>
+</section>
+<section id="partners-view" class="view" hidden>
+  <div class="page-heading"><div><div class="section-kicker">YOUR CONNECTED DEMO WORKSPACE</div><h1>Demo bank connections.</h1><p class="muted">Practice moving THB between NileBank and fictional partner accounts.</p></div><button id="partners-refresh" class="secondary">Refresh ↻</button></div>
+  <div class="feature-note"><strong>Fictional banks only.</strong> No real bank is connected. Never enter real banking credentials. Each partner starts with 5,000 simulated THB once; reconnecting preserves its balance.</div>
+  <div id="partner-connections" class="connection-grid"></div>
+  <div class="form-layout"><section class="panel form-panel"><h2>Connect a demo bank</h2><form id="partner-link-form"><label for="partner-bank">Available demo bank</label><select id="partner-bank" required></select><label class="check-label" for="partner-consent"><input id="partner-consent" type="checkbox" required> I understand this is a fictional connection using simulated money.</label><div id="partner-link-error" class="form-error" role="alert" hidden></div><button class="primary full-width">Connect demo account ↗</button></form></section>
+  <section class="panel form-panel"><h2>Move simulated THB</h2><form id="partner-move-form"><label for="partner-connection">Connected demo account</label><select id="partner-connection" required></select><label for="partner-direction">Direction</label><select id="partner-direction"><option value="IN">Demo bank → NileBank</option><option value="OUT">NileBank → demo bank</option></select><label for="partner-amount">Amount (THB)</label><input id="partner-amount" type="text" inputmode="decimal" required pattern="[0-9]+([.][0-9]{1,2})?" placeholder="0.00"><div id="partner-move-error" class="form-error" role="alert" hidden></div><button class="primary full-width">Review movement ↗</button></form>
+  <div id="partner-review" class="review-panel" hidden><h3>Confirm the movement</h3><p id="partner-review-details"></p><button id="partner-confirm" class="primary full-width">Confirm simulated movement</button></div></section></div>
+</section>
+<section id="finance-view" class="view" hidden>
+  <div class="page-heading"><div><div class="section-kicker">BUILD BETTER MONEY HABITS</div><h1>Your finance tracker.</h1><p class="muted">Understand your recorded spending, plan budgets and track saving goals.</p></div><div class="month-toolbar"><label for="finance-month">Month</label><input id="finance-month" type="month" min="2000-01" max="2100-12"><button id="finance-refresh" class="secondary">Refresh ↻</button></div></div>
+  <div class="feature-note"><strong>A separate planning space.</strong> Record THB income and spending here. Transfers, currency exchanges and bank top-ups are not automatically counted. Entries and goal allocations do not move bank funds. Insights explain recorded data; they are not financial advice or predictions.</div>
+  <div id="finance-totals" class="summary-grid four" aria-live="polite"></div>
+  <div class="feature-columns"><section class="panel"><div class="panel-title"><h2>Spending & category budgets</h2><span class="small-badge">THB</span></div><div id="finance-categories"></div></section><section class="panel"><h2>Insights you can act on</h2><div id="finance-insights"></div></section></div>
+  <div class="feature-columns"><section class="panel form-panel"><h2>Record income or spending</h2><form id="finance-entry-form"><div class="field-pair"><div><label for="entry-direction">Entry type</label><select id="entry-direction"><option value="EXPENSE">Expense</option><option value="INCOME">Income</option></select></div><div><label for="entry-category">Category</label><select id="entry-category" required></select></div></div><div class="field-pair"><div><label for="entry-amount">Amount (THB)</label><input id="entry-amount" type="text" inputmode="decimal" required pattern="[0-9]+([.][0-9]{1,2})?" placeholder="0.00"></div><div><label for="entry-date">Date</label><input id="entry-date" type="date" min="2000-01-01" required></div></div><label for="entry-description">Description (optional)</label><input id="entry-description" maxlength="120" placeholder="Lunch, rent, part-time work…"><div id="entry-error" class="form-error" role="alert" hidden></div><button class="primary full-width">Save tracker entry ↗</button></form></section>
+  <section class="panel form-panel"><h2>Set a category budget</h2><p class="muted">Applies to the selected month. Saving again updates that category's limit.</p><form id="finance-budget-form"><label for="budget-category">Expense category</label><select id="budget-category" required></select><label for="budget-amount">Monthly limit (THB)</label><input id="budget-amount" type="text" inputmode="decimal" required pattern="[0-9]+([.][0-9]{1,2})?" placeholder="0.00"><div id="budget-error" class="form-error" role="alert" hidden></div><button class="primary full-width">Save monthly budget ↗</button></form></section></div>
+  <section class="panel activity-panel"><div class="panel-title"><h2>Recorded entries</h2><span class="muted">Income & expenses only</span></div><div id="finance-entries"></div><div class="pagination"><button id="finance-previous" class="secondary">← Previous</button><span id="finance-page"></span><button id="finance-next" class="secondary">Next →</button></div></section>
+  <div class="page-heading goal-heading"><div><h2>Your savings goals</h2><p class="muted">Track planned allocations across months. No funds are reserved or transferred.</p></div></div><div id="finance-goals" class="connection-grid"></div>
+  <div class="feature-columns"><section class="panel form-panel"><h2>Create a goal</h2><form id="finance-goal-form"><label for="goal-name">Goal name</label><input id="goal-name" maxlength="80" required placeholder="Emergency fund, tuition, a laptop…"><label for="goal-target">Target (THB)</label><input id="goal-target" type="text" inputmode="decimal" pattern="[0-9]+([.][0-9]{1,2})?" required placeholder="0.00"><div id="goal-error" class="form-error" role="alert" hidden></div><button class="primary full-width">Create savings goal ↗</button></form></section>
+  <section class="panel form-panel"><h2>Record a goal allocation</h2><form id="finance-allocation-form"><label for="allocation-goal">Savings goal</label><select id="allocation-goal" required></select><label for="allocation-amount">Amount allocated (THB)</label><input id="allocation-amount" type="text" inputmode="decimal" pattern="[0-9]+([.][0-9]{1,2})?" required placeholder="0.00"><p class="field-help">Planning record only. Check your actual obligations and available funds first.</p><div id="allocation-error" class="form-error" role="alert" hidden></div><button class="primary full-width">Record allocation ↗</button></form></section></div>
+</section>
+
         </main>
         <footer class="bank-footer">
           <span>© NileBank · Digital Banking Simulator</span

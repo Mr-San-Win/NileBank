@@ -2,7 +2,7 @@
 
 A full-stack Java portfolio project demonstrating secure sessions, PostgreSQL transactions, explicit row locking, and retry-safe transfers through a responsive banking dashboard.
 
-**Educational demo only. All money is simulated THB. NileBank is not a bank, does not connect to financial institutions, and cannot process real payments. Use fictional profile information and a demo password.**
+**Educational demo only. All money is simulated (THB, USD and EUR). NileBank is not a bank, does not connect to financial institutions, and cannot process real payments. Use fictional profile information and a demo password.**
 
 ![Actual NileBank dashboard](docs/screenshots/dashboard-desktop.jpg)
 
@@ -15,6 +15,14 @@ A full-stack Java portfolio project demonstrating secure sessions, PostgreSQL tr
 - View persisted recent activity, paginated history, and account/profile details.
 - Responsive desktop/mobile layout, keyboard-accessible forms, visible demo notices, loading and error states.
 - PostgreSQL constraints, Flyway migrations, explicit account row locks, and immutable successful-operation history.
+
+## Exchange, demo banks and finance
+
+- Real ECB reference rates fetched via Frankfurter on refresh, with dated 120-second THB/USD/EUR exchange quotes.
+- Fictional partner-bank connections and atomic, idempotent simulated movements.
+- Manual personal finance entries, category budgets, savings goals and explainable monthly spending insights.
+
+See [extension guide and API](docs/EXTENSIONS.md) for a test walkthrough, rate freshness, consistency design and limitations. Publication results and the tested commits are recorded in [BUILD_LOG](docs/BUILD_LOG.md).
 
 ## Stack
 
@@ -53,15 +61,18 @@ Java 21 and Docker are required for the full suite. PostgreSQL integration tests
 ```bash
 sh mvnw -B verify
 node --check src/main/resources/static/app.js
+node --check src/main/resources/static/extensions.js
+python3 scripts/smoke.py
+python3 scripts/smoke_extensions.py
 ```
 
 PowerShell: `.\mvnw.cmd -B verify`. An installed Maven can also run `mvn verify`.
 
 Tests include registration, duplicate email, generic login errors, unauthenticated access, ownership, zero accounts, exact monetary validation, deposits/withdrawals, insufficient funds, immutable history, atomic transfers, idempotency replay/conflict, concurrent withdrawals, concurrent duplicate transfers, opposing transfers, mixed operations, CSRF rotation/logout, and a real HTTP session journey.
 
-Observed verification and exact counts are maintained in [BUILD_LOG](docs/BUILD_LOG.md). GitHub Actions passed the PostgreSQL tests, JavaScript syntax check and Docker image build; see the [successful run](https://github.com/Mr-San-Win/NileBank/actions/runs/41007135590) and the build log for the tested commit.
+Observed verification and publication/CI status are maintained in [BUILD_LOG](docs/BUILD_LOG.md). The GitHub Actions workflow runs PostgreSQL tests, both JavaScript syntax checks and a Docker image build. Historical CI receipts refer to the previous repository; new publication status is recorded separately.
 
-Observed on 30 October 2026: Java 21 `mvn -B verify` passed **31 tests, 0 failures, 0 errors, 0 skipped**, and packaged the executable JAR. The Docker build/start and database/application health checks passed. `python3 scripts/smoke.py` passed the complete HTTP banking journey against Docker, including idempotent replay and cross-user ownership rejection. Browser QA verified the actual frontend on desktop and at a 390px mobile breakpoint. These are functional checks, not a performance benchmark or independent security audit.
+Observed on 30 October 2026: Java 21 `mvn -B verify` passed **56 tests, 0 failures, 0 errors, 0 skipped**, and packaged the executable JAR. The Docker build/start and database/application health checks passed. Both `python3 scripts/smoke.py` and `python3 scripts/smoke_extensions.py` passed; the former verifies the complete HTTP banking journey against Docker, including idempotent replay and cross-user ownership rejection. Browser QA verified the actual frontend on desktop and at a 390px mobile breakpoint. These are functional checks, not a performance benchmark or independent security audit.
 
 For host Java development, use an independently running PostgreSQL instance and set `DB_URL`, `DB_USER`, and `DB_PASSWORD` in the process environment, then run `mvn spring-boot:run`. Spring Boot does not automatically load the Compose `.env` file. Use a fresh empty database so Flyway can create the schema.
 
@@ -82,18 +93,21 @@ flowchart LR
   Browser["HTML / CSS / ES modules"] -->|"same-origin JSON + session + CSRF"| Security["Spring Security"]
   Security --> Controllers["Validated controllers"]
   Controllers --> Services["Transactional services + ownership"]
-  Services --> Repositories["Spring Data JPA"]
+  Services --> Repositories["JPA / JdbcTemplate"]
   Repositories --> Postgres[("PostgreSQL")]
   Flyway["Flyway migrations"] --> Postgres
 ```
 
-Feature packages: `auth`, `user`, `account`, `transaction`, `transfer`, `config`, and `common`. Controllers handle HTTP; services enforce business rules and transaction boundaries; repositories persist entities; DTOs define external contracts. The application serves its own static frontend, so no CORS configuration or separate frontend server is needed.
+Feature packages: `auth`, `user`, `account`, `transaction`, `transfer`, `exchange`, `partner`, `finance`, `config`, and `common`. Controllers handle HTTP; services enforce business rules and transaction boundaries; repositories persist entities; DTOs define external contracts. The application serves its own static frontend, so no CORS configuration or separate frontend server is needed.
 
 ## Database
 
 - `app_users`: UUID, name, normalized unique email, BCrypt password hash, creation timestamp.
 - `bank_accounts`: UUID, unique owner FK, generated unique account number, THB currency constraint, numeric(19,2) nonnegative balance, ACTIVE/FROZEN status, optimistic version, creation timestamp.
 - `banking_transactions`: UUID, type/status, positive bounded numeric amount, source/destination FKs, unique reference, timestamp, sender-scoped idempotency key.
+- currency_wallets and exchange_quotes: foreign balances, expiring agreed rates and replay-safe execution with source provenance.
+- partner_connections and partner_movements: fictional bank balances, consent/state and scoped retry keys.
+- finance_entries, finance_budgets, savings_goals: separate owner-scoped THB planning data.
 - Flyway history and a small foundation metadata table track schema/application initialization.
 
 Indexes support source/destination history by timestamp. A PostgreSQL trigger rejects updates/deletes to transaction rows. Successful operations are audited; rejected operations do not create financial history.
@@ -102,7 +116,7 @@ Indexes support source/destination history by timestamp. A PostgreSQL trigger re
 
 BCrypt strength 12; HTTP-only, SameSite=Lax session cookies; session ID rotation on login; CSRF on all POSTs, including login/registration; token rotation after login; logout invalidates the session. JSON errors hide stack traces, and response DTOs never expose password hashes. Backend services check account ownership and frozen status. CSP restricts scripts/styles to this origin, with framing blocked.
 
-JavaScript fetches a masked CSRF token from `GET /api/v1/auth/csrf`, sends it in the returned header on POSTs, and fetches a fresh token after login. No authentication tokens or passwords are placed in localStorage. Browser text from the API is inserted through `textContent`.
+JavaScript fetches a masked CSRF token from `GET /api/v1/auth/csrf`, sends it in the returned header on state-changing requests, and fetches a fresh token after login. No authentication tokens or passwords are placed in localStorage. Browser text from the API is inserted through `textContent`.
 
 For any deployment beyond this local demo, terminate HTTPS at a trusted proxy, set `COOKIE_SECURE=true`, configure proxy trust deliberately, and add operational and abuse controls. Local HTTP defaults are unsuitable for a public service.
 
@@ -137,11 +151,11 @@ All paths start with `/api/v1`. See [API documentation](docs/API.md) for bodies,
 
 ## Screenshots and demo
 
-Screenshots were captured from the running app using fictional users and persisted simulated transactions. [Mobile dashboard](docs/screenshots/dashboard-mobile.jpg). Follow [DEMO](docs/DEMO.md) for an interview walkthrough.
+Screenshots were captured from the running app using fictional users and persisted simulated transactions. [Currency exchange](docs/screenshots/currency-exchange.png) · [Finance tracker](docs/screenshots/finance-tracker.png). [Mobile dashboard](docs/screenshots/dashboard-mobile.jpg). Follow [DEMO](docs/DEMO.md) for an interview walkthrough.
 
 ## Limitations and future improvements
 
-One account and THB only. No password reset, email verification, MFA, rate limiting, admin UI, or self-service freeze action. Frozen state is enforced in the backend and integration tests. Sessions live in application memory and expire on restart. The UI keeps a pending transfer key in tab memory: after a reload or uncertain response, inspect history before starting a fresh transfer. Deposits/withdrawals do not have idempotency keys; an ambiguous response must be checked before retrying.
+One primary THB account with USD/EUR exchange wallets. Ordinary withdrawals and account-to-account transfers use THB. No password reset, email verification, MFA, rate limiting, admin UI, or self-service freeze action. Frozen state is enforced in the backend and integration tests. Sessions live in application memory and expire on restart. The UI keeps a pending transfer key in tab memory: after a reload or uncertain response, inspect history before starting a fresh transfer. Deposits/withdrawals do not have idempotency keys; an ambiguous response must be checked before retrying.
 
 History contains successful financial operations only. The database owner could alter/disable its trigger; it is not an externally tamper-proof ledger. No independent security audit or performance benchmarks have been performed. No public deployment or real payment integrations exist.
 
@@ -152,4 +166,4 @@ Potential improvements: rate limits and authentication abuse monitoring, recover
 [Architecture](docs/ARCHITECTURE.md) · [API](docs/API.md) · [Interview guide](docs/INTERVIEW_GUIDE.md) · [WSL workspace](docs/WSL.md) · [Build evidence](docs/BUILD_LOG.md) · [Engineering rules](AGENTS.md)
 
 
-The current active workspace is /home/san_win/NileBank in Ubuntu. Native Ubuntu verification also passed all 31 tests after the NileBank rename. Run python3 scripts/smoke.py against the Docker app for a cross-platform HTTP smoke check; it uses the Python standard library only. The PowerShell alternative is intended for a local Windows checkout, not a UNC path blocked by Windows execution policy.
+The current active workspace is /home/san_win/NileBank in Ubuntu. Native Ubuntu verification also passed all 31 original tests after the NileBank rename; the extension suite now contains 56 passing tests. Run python3 scripts/smoke.py against the Docker app for a cross-platform HTTP smoke check; it uses the Python standard library only. The PowerShell alternative is intended for a local Windows checkout, not a UNC path blocked by Windows execution policy.

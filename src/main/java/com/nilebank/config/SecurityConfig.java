@@ -80,6 +80,7 @@ public class SecurityConfig {
                         "/index.html",
                         "/styles.css",
                         "/app.js",
+                        "/extensions.js",
                         "/favicon.ico",
                         "/api/v1/health",
                         "/api/v1/auth/csrf",
