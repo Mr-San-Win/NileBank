@@ -59,7 +59,7 @@ PowerShell: `.\mvnw.cmd -B verify`. An installed Maven can also run `mvn verify`
 
 Tests include registration, duplicate email, generic login errors, unauthenticated access, ownership, zero accounts, exact monetary validation, deposits/withdrawals, insufficient funds, immutable history, atomic transfers, idempotency replay/conflict, concurrent withdrawals, concurrent duplicate transfers, opposing transfers, mixed operations, CSRF rotation/logout, and a real HTTP session journey.
 
-Observed verification and exact counts are maintained in [BUILD_LOG](docs/BUILD_LOG.md). GitHub Actions is configured to run tests and build the image, but remote CI cannot be claimed as executed until the repository is pushed.
+Observed verification and exact counts are maintained in [BUILD_LOG](docs/BUILD_LOG.md). GitHub Actions passed the PostgreSQL tests, JavaScript syntax check and Docker image build; see the [successful run](https://github.com/Mr-San-Win/NileBank/actions/runs/41007135590) and the build log for the tested commit.
 
 Observed on 30 October 2026: Java 21 `mvn -B verify` passed **31 tests, 0 failures, 0 errors, 0 skipped**, and packaged the executable JAR. The Docker build/start and database/application health checks passed. `python3 scripts/smoke.py` passed the complete HTTP banking journey against Docker, including idempotent replay and cross-user ownership rejection. Browser QA verified the actual frontend on desktop and at a 390px mobile breakpoint. These are functional checks, not a performance benchmark or independent security audit.
 

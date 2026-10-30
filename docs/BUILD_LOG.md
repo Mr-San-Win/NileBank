@@ -77,3 +77,8 @@
 | Quality/delivery | d91a063b72c963bb941f16d5963a3310dfbdd2a0 | Pushed in recovery branch history |
 | NileBank rename | 5e086c0856c3516442e36e69d6b788b33afec6c9 | Pushed |
 - GitHub Actions run 41007037465 was in progress when checked: https://github.com/Mr-San-Win/NileBank/actions/runs/41007037465 . No remote success claimed yet. A later documentation receipt commit records these results.
+
+## Final CI result — successful
+- GitHub Actions 41007135590 completed successfully for 61917c7848ec4ddc1f7171a13618904d50d98a57: PostgreSQL verify, JavaScript syntax, Docker image build and evidence upload all succeeded.
+- Earlier source push run 41007037465 also completed successfully.
+- Evidence: https://github.com/Mr-San-Win/NileBank/actions/runs/41007135590 . This final receipt changes documentation only and uses [skip ci] to avoid repeating the already-green application checks.

@@ -1,7 +1,7 @@
 # NileBank delivery report
 
 ## 1. Status
-The local full-stack MVP is implemented and verified in Ubuntu WSL. The Docker application is running at http://localhost:8080. All six implementation milestones and the NileBank rename have been pushed. GitHub Actions is running; its final result is reported separately.
+The local full-stack MVP is implemented and verified in Ubuntu WSL. The Docker application is running at http://localhost:8080. All six implementation milestones and the NileBank rename have been pushed. GitHub Actions completed successfully for 61917c7848ec4ddc1f7171a13618904d50d98a57, including tests, JavaScript syntax and Docker image build: https://github.com/Mr-San-Win/NileBank/actions/runs/41007135590 .
 
 ## 2. Features
 Registration/login/logout, one virtual account per user, zero starting balance, exact simulated THB deposits/withdrawals, atomic transfers with persisted idempotency, paginated transaction history, profile details, responsive dashboard, confirmation dialogs and error/loading/empty states.
@@ -25,7 +25,7 @@ WSL build/start and app/database readiness passed. V1-V6 migrations are successf
 Canonical folder: /home/san_win/NileBank.
 Repository: https://github.com/Mr-San-Win/NileBank
 Branch: codex/nilebank-mvp.
-Verified push head before this report receipt: ef04ce09b1ca782c458114024900e8144dad4faa.
+Verified CI/push head before the final documentation receipt: 61917c7848ec4ddc1f7171a13618904d50d98a57.
 Main remained 1315d16e133b7e75a00a89a86766637e16798ebc.
 
 ## 9. Pushed milestones
