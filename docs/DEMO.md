@@ -1,4 +1,4 @@
-# Five-minute interview demo
+# Application demo
 
 Use the Docker startup instructions in README. Every name, account, balance and payment here is fictional.
 

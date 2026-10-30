@@ -96,7 +96,7 @@ backend/
   src/test/java/          unit, HTTP and PostgreSQL concurrency tests
 frontend/
   index.html, styles.css, app.js, extensions.js
-docs/                     architecture, API, interview guide and screenshots
+docs/                     architecture, API, setup guides and screenshots
 scripts/                  optional HTTP smoke checks
 .github/workflows/        CI
 compose.yaml              single application service plus PostgreSQL
@@ -171,7 +171,7 @@ All paths start with `/api/v1`. See [API documentation](docs/API.md) for bodies,
 
 ## Screenshots and demo
 
-Screenshots were captured from the running app using fictional users and persisted simulated transactions. [Currency exchange](docs/screenshots/currency-exchange.png) · [Finance tracker](docs/screenshots/finance-tracker.png). [Mobile dashboard](docs/screenshots/dashboard-mobile.jpg). Follow [DEMO](docs/DEMO.md) for an interview walkthrough.
+Screenshots were captured from the running app using fictional users and persisted simulated transactions. [Currency exchange](docs/screenshots/currency-exchange.png) · [Finance tracker](docs/screenshots/finance-tracker.png). [Mobile dashboard](docs/screenshots/dashboard-mobile.jpg). Follow [DEMO](docs/DEMO.md) for a step-by-step walkthrough.
 
 ## Limitations and future improvements
 
@@ -183,4 +183,4 @@ Potential improvements: rate limits and authentication abuse monitoring, recover
 
 ## Further reading
 
-[Architecture](docs/ARCHITECTURE.md) · [API](docs/API.md) · [Interview guide](docs/INTERVIEW_GUIDE.md)
+[Architecture](docs/ARCHITECTURE.md) · [API](docs/API.md)
