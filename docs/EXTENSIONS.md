@@ -4,7 +4,7 @@ All balances and partner movements remain simulated. Currency rates are real pub
 
 ## Try the new screens
 
-Start `docker compose up --build` in `/home/san_win/NileBank`, then open http://localhost:8080. Register a fictional profile, create an account and deposit simulated THB.
+Start `docker compose up --build` from the repository root, then open http://localhost:8080. Register a fictional profile, create an account and deposit simulated THB.
 
 1. **Currency exchange:** refresh rates and inspect the source, publication date and retrieval time. Request a THB/USD/EUR quote, review the amount received, then confirm. Wallet balances and transaction history update. Replaying the same quote returns the original exchange.
 2. **Demo banks:** consent to connect Harbor Demo Bank or Orchid Demo Bank. Each fictional connection starts with 5,000 simulated THB once. Review and confirm a movement in either direction. Disconnecting and reconnecting preserves its balance.
@@ -53,6 +53,6 @@ All routes start with `/api/v1`, require authentication, and use the existing CS
 
 The integrated Maven suite passed 56 tests against PostgreSQL with no failures, errors or skips. It covers exchange replay/expiry/ownership/rollback, shared-lock contention, partner replay/conflict/rollback/reconnection, and finance isolation/arithmetic/pagination/concurrent goal allocation, plus the original banking/security tests. Provider parser tests use deterministic fixtures; the separate HTTP smoke script exercises the actual public provider.
 
-Run `mvn verify`, then `python3 scripts/smoke_extensions.py` against the running Docker application. The latter requires internet access and creates fictional persisted demo records. Both smoke scripts use only the Python standard library.
+Run `mvn -f backend/pom.xml clean verify`, then `python3 scripts/smoke_extensions.py` against the running Docker application. The latter requires internet access and creates fictional persisted demo records. Both smoke scripts use only the Python standard library.
 
 No real bank connectors, payments, bank credential storage, automatic transaction categorization, recurring entries, live trading feed or goal withdrawals are implemented. Foreign balances can be exchanged back to THB; ordinary withdrawals and account-to-account transfers remain THB only.

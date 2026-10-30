@@ -30,7 +30,14 @@ Java 21 · Spring Boot 3.5.16 · Maven 3.9.11 wrapper · Spring MVC/Data JPA/Sec
 
 ## Run locally with Docker
 
-Requires Docker Desktop or Docker Engine with Compose, a running Linux container engine, internet access for the first image/dependency download, and a free localhost port 8080.
+Requires Git, Docker Desktop or Docker Engine with Compose, a running Linux container engine, internet access for the first image/dependency download and exchange rates, and a free localhost port 8080. Run the commands below from the repository root.
+
+Clone the application branch (until its pull request is merged into main):
+
+```bash
+git clone --branch codex/fullstack-monorepo https://github.com/Mr-San-Win/NileBank..git nilebank
+cd nilebank
+```
 
 1. Copy the example configuration:
 
@@ -56,35 +63,48 @@ No preloaded login credentials exist. Register a fictional profile and create it
 
 ## Tests and development
 
-Java 21 and Docker are required for the full suite. PostgreSQL integration tests are mandatory and fail if Docker is unavailable; they are not silently skipped.
+Java 21 and Docker are required for the full suite. Node.js 20+ is needed for JavaScript syntax checks, and Python 3 for the optional HTTP smoke scripts. No frontend dependencies need installation. PostgreSQL integration tests are mandatory and fail if Docker is unavailable; they are not silently skipped.
 
 ```bash
-sh mvnw -B verify
-node --check src/main/resources/static/app.js
-node --check src/main/resources/static/extensions.js
+cd backend
+sh mvnw -B clean verify
+cd ..
+node --check frontend/app.js
+node --check frontend/extensions.js
 python3 scripts/smoke.py
 python3 scripts/smoke_extensions.py
 ```
 
-PowerShell: `.\mvnw.cmd -B verify`. An installed Maven can also run `mvn verify`.
+PowerShell: run `.\mvnw.cmd -B clean verify` inside `backend/`. An installed Maven can run `mvn -f backend/pom.xml clean verify` from the repository root. The smoke scripts require the Docker app to be running and create fictional persisted demo records.
 
 Tests include registration, duplicate email, generic login errors, unauthenticated access, ownership, zero accounts, exact monetary validation, deposits/withdrawals, insufficient funds, immutable history, atomic transfers, idempotency replay/conflict, concurrent withdrawals, concurrent duplicate transfers, opposing transfers, mixed operations, CSRF rotation/logout, and a real HTTP session journey.
 
-The GitHub Actions workflow runs PostgreSQL tests, both JavaScript syntax checks and a Docker image build. The [publication verification run](https://github.com/Mr-San-Win/NileBank./actions/runs/41083808889) succeeded for commit 44a6a51, including PostgreSQL tests, JavaScript checks and the Docker build.
+The GitHub Actions workflow runs PostgreSQL tests through the backend Maven wrapper, checks both frontend JavaScript modules and builds the single application image. Refactor verification results are documented in [the structural refactor guide](docs/REFACTOR.md).
 
 Observed on 30 October 2026: Java 21 `mvn -B verify` passed **56 tests, 0 failures, 0 errors, 0 skipped**, and packaged the executable JAR. The Docker build/start and database/application health checks passed. Both `python3 scripts/smoke.py` and `python3 scripts/smoke_extensions.py` passed; the former verifies the complete HTTP banking journey against Docker, including idempotent replay and cross-user ownership rejection. Browser QA verified the actual frontend on desktop and at a 390px mobile breakpoint. These are functional checks, not a performance benchmark or independent security audit.
 
-For host Java development, use an independently running PostgreSQL instance and set `DB_URL`, `DB_USER`, and `DB_PASSWORD` in the process environment, then run `mvn spring-boot:run`. Spring Boot does not automatically load the Compose `.env` file. Use a fresh empty database so Flyway can create the schema.
+For host Java development, use an independently running PostgreSQL instance and set `DB_URL`, `DB_USER`, and `DB_PASSWORD` in the process environment, then run `mvn -f backend/pom.xml spring-boot:run`. Spring Boot does not automatically load the Compose `.env` file. Use a fresh empty database so Flyway can create the schema.
 
-If Windows Java reports `Unable to establish loopback connection`, choose an existing short writable directory for `jdk.net.unixdomain.tmpdir`. This environment needed the following workaround (the project directory is intentionally quoted):
+## Repository structure
 
-```powershell
-New-Item -ItemType Directory -Force .tools/tmp | Out-Null
-$env:JAVA_TOOL_OPTIONS='"-Djdk.net.unixdomain.tmpdir='+(Resolve-Path .tools/tmp).Path+'"'
-.\mvnw.cmd -B verify
+```text
+backend/
+  pom.xml, mvnw, mvnw.cmd, .mvn/
+  Dockerfile
+  src/main/java/           Spring Boot application
+  src/main/resources/     configuration and Flyway migrations
+  src/test/java/          unit, HTTP and PostgreSQL concurrency tests
+frontend/
+  index.html, styles.css, app.js, extensions.js
+docs/                     architecture, API, interview guide and screenshots
+scripts/                  optional HTTP smoke checks
+.github/workflows/        CI
+compose.yaml              single application service plus PostgreSQL
 ```
 
-This is a host-specific Java socket-path workaround. Docker uses Linux and does not require it.
+Maven copies `frontend/` into `backend/target/classes/static/` during `process-resources`, without resource filtering. The executable JAR contains those assets under `BOOT-INF/classes/static/`. Source assets are maintained only in `frontend/`; generated copies are ignored. Run a clean build after renaming or deleting assets to discard old output. Keep both directories together when building.
+
+Spring Boot serves the packaged frontend and `/api/v1` from the same origin, retaining session cookies, CSRF and security routing. Production requires no Node.js runtime or separate frontend server. The Docker build uses the repository root as its context and `backend/Dockerfile`.
 
 ## Architecture
 

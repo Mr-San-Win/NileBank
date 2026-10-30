@@ -3,3 +3,5 @@
 mvnw text eol=lf
 *.cmd text eol=crlf
 *.jpg binary
+**/mvnw text eol=lf
+*.png binary

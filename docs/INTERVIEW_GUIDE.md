@@ -44,6 +44,6 @@ Describe it honestly: “I built a Java/Spring Boot banking simulator with Postg
 
 ## Before the interview
 
-Run `mvn verify` with Docker available and read the actual test output. Walk through registration, two-user transfer, exchange, fictional bank movement and an over-budget tracker entry. Explain one failure path and one concurrency test in your own words.
+Run `mvn -f backend/pom.xml clean verify` with Docker available and read the actual test output. Walk through registration, two-user transfer, exchange, fictional bank movement and an over-budget tracker entry. Explain one failure path and one concurrency test in your own words.
 
 A real financial system would need an independently designed double-entry ledger, reconciliation, identity/regulatory controls, abuse/fraud prevention, recovery/MFA, observability, disaster recovery and independent security review. NileBank has no real payment integration, public production deployment or proven performance benchmark. Being clear about these limits is part of good engineering.

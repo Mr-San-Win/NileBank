@@ -1,7 +1,7 @@
 name: Build and PostgreSQL tests
 on:
   push:
-    branches: [main, codex/nilebank-mvp]
+    branches: [main, 'codex/**']
   pull_request:
 permissions:
   contents: read
@@ -16,17 +16,19 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
+          cache-dependency-path: backend/pom.xml
       - name: Verify (PostgreSQL Testcontainers requires Docker)
-        run: sh mvnw -B verify
+        working-directory: backend
+        run: sh mvnw -B clean verify
       - name: Check JavaScript syntax
         run: |
-          node --check src/main/resources/static/app.js
-          node --check src/main/resources/static/extensions.js
+          node --check frontend/app.js
+          node --check frontend/extensions.js
       - name: Build application image
-        run: docker build -t nilebank:ci .
+        run: docker build -f backend/Dockerfile -t nilebank:ci .
       - name: Preserve test evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-reports
-          path: target/surefire-reports/
+          path: backend/target/surefire-reports/

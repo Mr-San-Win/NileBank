@@ -82,3 +82,8 @@ Compose supplies PostgreSQL readiness, a persistent volume and a non-root Java r
 JUnit/Spring Boot/Testcontainers tests run on actual PostgreSQL. Concurrent tests use separate service transactions and synchronized starts to exercise overspending, opposing/mixed transfers, replay and goal allocation. HTTP tests verify sessions, CSRF and ownership; separate smoke scripts and browser checks exercise the real app. Provider fixtures make unit/integration tests deterministic, while the live smoke check verifies public rate retrieval.
 
 This is a layered monolith with account balances and immutable audit history, not a production double-entry financial ledger. It intentionally omits real payments, KYC, recovery/MFA, rate limiting, reconciliation, fraud controls and operational banking guarantees. See EXTENSIONS.md for APIs.
+
+
+## Source layout and build
+
+`backend/` owns Maven, Java, configuration, Flyway migrations, tests and the application Dockerfile. `frontend/` owns the unmodified HTML/CSS/ES modules. Maven resources configuration packages the sibling frontend directory into the classpath static directory, so both the packaged JAR and test server expose the same URLs as before. No generated assets are checked in. Root Compose builds with context `.` and Dockerfile `backend/Dockerfile`; the image is still one non-root Java service. CI runs a clean backend build, frontend syntax checks and the root-context image build. This refactor changes paths and packaging only; APIs, schema contents, session/CSRF behavior and transaction logic are unchanged.
