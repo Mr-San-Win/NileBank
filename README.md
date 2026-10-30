@@ -35,7 +35,7 @@ Requires Git, Docker Desktop or Docker Engine with Compose, a running Linux cont
 Clone the application branch (until its pull request is merged into main):
 
 ```bash
-git clone --branch codex/fullstack-monorepo https://github.com/Mr-San-Win/NileBank..git nilebank
+git clone --branch refactor/fullstack-monorepo https://github.com/Mr-San-Win/NileBank..git nilebank
 cd nilebank
 ```
 

@@ -1,7 +1,7 @@
 name: Build and PostgreSQL tests
 on:
   push:
-    branches: [main, 'codex/**']
+    branches: [main, 'refactor/**', 'feature/**']
   pull_request:
 permissions:
   contents: read
