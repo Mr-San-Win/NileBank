@@ -55,4 +55,4 @@ The integrated Maven suite passed 56 tests against PostgreSQL with no failures, 
 
 Run `mvn verify`, then `python3 scripts/smoke_extensions.py` against the running Docker application. The latter requires internet access and creates fictional persisted demo records. Both smoke scripts use only the Python standard library.
 
-No real bank connectors, payments, bank credential storage, automatic transaction categorization, recurring entries, live trading feed or goal withdrawals are implemented. Foreign balances can be exchanged back to THB; ordinary withdrawals and account-to-account transfers remain THB only. See BUILD_LOG.md for the authorized final commit and publication status.
+No real bank connectors, payments, bank credential storage, automatic transaction categorization, recurring entries, live trading feed or goal withdrawals are implemented. Foreign balances can be exchanged back to THB; ordinary withdrawals and account-to-account transfers remain THB only.

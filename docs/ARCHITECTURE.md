@@ -81,4 +81,4 @@ Compose supplies PostgreSQL readiness, a persistent volume and a non-root Java r
 
 JUnit/Spring Boot/Testcontainers tests run on actual PostgreSQL. Concurrent tests use separate service transactions and synchronized starts to exercise overspending, opposing/mixed transfers, replay and goal allocation. HTTP tests verify sessions, CSRF and ownership; separate smoke scripts and browser checks exercise the real app. Provider fixtures make unit/integration tests deterministic, while the live smoke check verifies public rate retrieval.
 
-This is a layered monolith with account balances and immutable audit history, not a production double-entry financial ledger. It intentionally omits real payments, KYC, recovery/MFA, rate limiting, reconciliation, fraud controls and operational banking guarantees. See EXTENSIONS.md for APIs and BUILD_LOG.md for observed execution evidence.
+This is a layered monolith with account balances and immutable audit history, not a production double-entry financial ledger. It intentionally omits real payments, KYC, recovery/MFA, rate limiting, reconciliation, fraud controls and operational banking guarantees. See EXTENSIONS.md for APIs.

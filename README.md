@@ -22,7 +22,7 @@ A full-stack Java portfolio project demonstrating secure sessions, PostgreSQL tr
 - Fictional partner-bank connections and atomic, idempotent simulated movements.
 - Manual personal finance entries, category budgets, savings goals and explainable monthly spending insights.
 
-See [extension guide and API](docs/EXTENSIONS.md) for a test walkthrough, rate freshness, consistency design and limitations. Publication results and the tested commits are recorded in [BUILD_LOG](docs/BUILD_LOG.md).
+See [extension guide and API](docs/EXTENSIONS.md) for a test walkthrough, rate freshness, consistency design and limitations.
 
 ## Stack
 
@@ -70,7 +70,7 @@ PowerShell: `.\mvnw.cmd -B verify`. An installed Maven can also run `mvn verify`
 
 Tests include registration, duplicate email, generic login errors, unauthenticated access, ownership, zero accounts, exact monetary validation, deposits/withdrawals, insufficient funds, immutable history, atomic transfers, idempotency replay/conflict, concurrent withdrawals, concurrent duplicate transfers, opposing transfers, mixed operations, CSRF rotation/logout, and a real HTTP session journey.
 
-Observed verification and publication/CI status are maintained in [BUILD_LOG](docs/BUILD_LOG.md). The GitHub Actions workflow runs PostgreSQL tests, both JavaScript syntax checks and a Docker image build. The [publication verification run](https://github.com/Mr-San-Win/NileBank./actions/runs/41083808889) succeeded for commit 44a6a51, including PostgreSQL tests, JavaScript checks and the Docker build. Earlier historical receipts refer to the previous repository.
+The GitHub Actions workflow runs PostgreSQL tests, both JavaScript syntax checks and a Docker image build. The [publication verification run](https://github.com/Mr-San-Win/NileBank./actions/runs/41083808889) succeeded for commit 44a6a51, including PostgreSQL tests, JavaScript checks and the Docker build.
 
 Observed on 30 October 2026: Java 21 `mvn -B verify` passed **56 tests, 0 failures, 0 errors, 0 skipped**, and packaged the executable JAR. The Docker build/start and database/application health checks passed. Both `python3 scripts/smoke.py` and `python3 scripts/smoke_extensions.py` passed; the former verifies the complete HTTP banking journey against Docker, including idempotent replay and cross-user ownership rejection. Browser QA verified the actual frontend on desktop and at a 390px mobile breakpoint. These are functional checks, not a performance benchmark or independent security audit.
 
@@ -163,7 +163,4 @@ Potential improvements: rate limits and authentication abuse monitoring, recover
 
 ## Further reading
 
-[Architecture](docs/ARCHITECTURE.md) · [API](docs/API.md) · [Interview guide](docs/INTERVIEW_GUIDE.md) · [WSL workspace](docs/WSL.md) · [Build evidence](docs/BUILD_LOG.md) · [Engineering rules](AGENTS.md)
-
-
-The current active workspace is /home/san_win/NileBank in Ubuntu. Native Ubuntu verification also passed all 31 original tests after the NileBank rename; the extension suite now contains 56 passing tests. Run python3 scripts/smoke.py against the Docker app for a cross-platform HTTP smoke check; it uses the Python standard library only. The PowerShell alternative is intended for a local Windows checkout, not a UNC path blocked by Windows execution policy.
+[Architecture](docs/ARCHITECTURE.md) · [API](docs/API.md) · [Interview guide](docs/INTERVIEW_GUIDE.md)
