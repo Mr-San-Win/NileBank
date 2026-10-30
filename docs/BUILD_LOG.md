@@ -59,3 +59,21 @@
 - Native browser verified NileBank title, N brand mark, registration/login, zero account with NB identifier and persisted 10,000.00 simulated deposit. Genuine desktop/mobile screenshots refreshed.
 - A trailing CR in a temporary shell helper caused its final empty line to exit nonzero after all Docker checks had succeeded; application build/readiness/migration/data comparisons succeeded independently. Windows refused executing a PowerShell smoke file over UNC; no security policy was changed, and the native Python check passed instead.
 - Source rename is verified and ready to commit. Next: connect the existing main README history and push only codex/nilebank-mvp.
+
+## GitHub recovery and delivery — pushed
+- Repository: https://github.com/Mr-San-Win/NileBank ; active folder /home/san_win/NileBank ; branch codex/nilebank-mvp.
+- SSH authentication succeeded as Mr-San-Win. Repository already existed, so no creation or additional gh login was needed.
+- Rename commit 5e086c0856c3516442e36e69d6b788b33afec6c9 passed the recorded WSL/Docker/browser checks.
+- Merged existing main history in ef04ce09b1ca782c458114024900e8144dad4faa. The only conflict was its original '# NileBank' README placeholder; retained the verified detailed NileBank README. Original content remains in history.
+- git push --set-upstream origin codex/nilebank-mvp succeeded. Remote branch SHA verified as ef04ce09b1ca782c458114024900e8144dad4faa. Main stayed 1315d16e133b7e75a00a89a86766637e16798ebc. No force-push, deletion or main update.
+
+| Milestone | Commit | Push result |
+| --- | --- | --- |
+| Foundation | 909ffe08483ed04a158671e7f1dc47ee61cc507c | Pushed in recovery branch history |
+| Authentication | 4f9b70c24dbfae3937ab6d1ad36aa503e263bbfa | Pushed in recovery branch history |
+| Accounts/transactions | 2e818c2bed8bbfb88360777d4334a023b4b46e19 | Pushed in recovery branch history |
+| Atomic transfers | 5e0db8ec31d5882194f7bdebcc9f3d07b0a26acc | Pushed in recovery branch history |
+| Frontend | 21d7a80f62ac32b6f2f17e0098bb991d1d71c798 | Pushed in recovery branch history |
+| Quality/delivery | d91a063b72c963bb941f16d5963a3310dfbdd2a0 | Pushed in recovery branch history |
+| NileBank rename | 5e086c0856c3516442e36e69d6b788b33afec6c9 | Pushed |
+- GitHub Actions run 41007037465 was in progress when checked: https://github.com/Mr-San-Win/NileBank/actions/runs/41007037465 . No remote success claimed yet. A later documentation receipt commit records these results.

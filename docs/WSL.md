@@ -23,4 +23,3 @@ New account/reference identifiers use NB. Existing VB account numbers are accept
 The first Ubuntu wrapper download was interrupted. Native verification uses Ubuntu Java 21 and a project-local Maven 3.9.11 distribution with the already-downloaded dependency cache. This does not change source code, tests or runtime database behavior. The ordinary wrapper may need internet access on its first run.
 
 GitHub SSH authentication has been verified as Mr-San-Win. A separate gh login is needed only for future CLI API operations such as creating a repository; pushing this existing repository uses SSH.
-
