@@ -1,0 +1,10 @@
+target/
+.tools/
+.env
+*.log
+.idea/
+*.iml
+
+
+__pycache__/
+*.pyc

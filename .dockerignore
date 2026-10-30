@@ -1,0 +1,7 @@
+.git
+.tools
+target
+.env
+
+**/target
+**/__pycache__
