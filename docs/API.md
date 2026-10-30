@@ -1,4 +1,4 @@
-# VaultBank JSON API
+# NileBank JSON API
 
 Base: `/api/v1`. Same-origin session cookie authentication. All money is simulated THB. Use fictional data.
 
@@ -37,7 +37,7 @@ No body. Creates one account for the current user; a second account → 409.
 ### GET /accounts/me → 200
 
 ```json
-{"id":"<uuid>","accountNumber":"VB<20 uppercase hex characters>","currency":"THB","balance":"0.00","status":"ACTIVE","createdAt":"<UTC instant>"}
+{"id":"<uuid>","accountNumber":"NB<20 uppercase hex characters>","currency":"THB","balance":"0.00","status":"ACTIVE","createdAt":"<UTC instant>"}
 ```
 
 No account → 404. There is no read endpoint accepting another user's account ID.
@@ -55,7 +55,7 @@ Positive decimal, at most 2 fractional places, at most 1,000,000 THB. BigDecimal
 Header: `Idempotency-Key: <8–100 letters/digits/underscores/hyphens>`. A UUID is suitable.
 
 ```json
-{"sourceAccountId":"<own UUID>","recipientAccountNumber":"VB<20 uppercase hex characters>","amount":"50.25"}
+{"sourceAccountId":"<own UUID>","recipientAccountNumber":"NB<20 uppercase hex characters>","amount":"50.25"}
 ```
 
 Recipient must exist, differ from sender, and be active. Sender must own source; both accounts must be active for new transfers. Matching same-key retries return the original transaction ID/reference without moving funds again. A changed amount or recipient using an already successful key → 409. Keys are scoped to source accounts. Failed transactions roll back their keys. A replay of an already committed result may succeed even if an account has subsequently frozen.
@@ -67,8 +67,8 @@ The frontend retains its key while retrying the same reviewed payload in the sam
 ```json
 {
   "id":"<uuid>","type":"TRANSFER","status":"SUCCESS","amount":"50.25",
-  "direction":"OUT","sourceAccount":"VB<sender>","destinationAccount":"VB<recipient>",
-  "reference":"VB-<uuid>","createdAt":"<UTC instant>"
+  "direction":"OUT","sourceAccount":"NB<sender>","destinationAccount":"NB<recipient>",
+  "reference":"NB-<uuid>","createdAt":"<UTC instant>"
 }
 ```
 

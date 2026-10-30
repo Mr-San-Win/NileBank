@@ -1,7 +1,7 @@
 spring:
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/vaultbank}
-    username: ${DB_USER:vaultbank}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/nilebank}
+    username: ${DB_USER:nilebank}
     password: ${DB_PASSWORD}
   jpa:
     open-in-view: false

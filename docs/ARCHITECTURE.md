@@ -1,6 +1,6 @@
 # Architecture
 
-VaultBank is a same-origin Spring Boot monolith serving JSON APIs and static browser assets. All funds are simulated THB. PostgreSQL is the source of truth; Flyway owns migrations and Hibernate validates mappings.
+NileBank is a same-origin Spring Boot monolith serving JSON APIs and static browser assets. All funds are simulated THB. PostgreSQL is the source of truth; Flyway owns migrations and Hibernate validates mappings.
 
 ## Request flow
 Browser → Spring Security (session and CSRF) → validated controller DTO → transactional service → JPA repository → PostgreSQL. Responses contain DTOs, never password hashes or persistence entities.
@@ -15,7 +15,7 @@ One account per user, one currency, bounded amounts, synchronous requests, no ex
 
 ## Schema and audit
 
-Flyway V1 initializes application metadata; V2 creates users; V3 creates accounts and financial history; V4 adds scoped transfer keys; V5 makes history append-only with a PostgreSQL trigger. Users and accounts use UUID primary keys. Each account references one owner under a unique constraint. Transactions reference source/destination account rows; a shape constraint enforces which references apply to deposits, withdrawals and transfers. Unique email/account number/reference/key constraints protect identity. History indexes cover source/destination plus time. Account status and currency are database constrained; negative balances are rejected at both service and database boundaries.
+Flyway V1 initializes application metadata; V2 creates users; V3 creates accounts and financial history; V4 adds scoped transfer keys; V5 makes history append-only with a PostgreSQL trigger; V6 updates product metadata to NileBank without changing historical checksums or balances. Users and accounts use UUID primary keys. Each account references one owner under a unique constraint. Transactions reference source/destination account rows; a shape constraint enforces which references apply to deposits, withdrawals and transfers. Unique email/account number/reference/key constraints protect identity. History indexes cover source/destination plus time. Account status and currency are database constrained; negative balances are rejected at both service and database boundaries.
 
 The account version column is an additional optimistic safeguard; pessimistic write locks are the primary monetary concurrency mechanism. There are no endpoints for deleting accounts, editing balances, changing owners, or mutating history. The database owner can still disable a trigger, so this is not independently tamper-proof storage.
 

@@ -160,7 +160,7 @@ function authMode(mode) {
     : "Sign in to your personal demo account.";
   $("#auth-submit").textContent = register
     ? "Create demo profile ↗"
-    : "Sign in to VaultBank ↗";
+    : "Sign in to NileBank ↗";
   $("#login-tab").classList.toggle("selected", !register);
   $("#register-tab").classList.toggle("selected", register);
   $("#login-tab").setAttribute("aria-pressed", String(!register));
@@ -448,7 +448,7 @@ $("#auth-form").addEventListener("submit", async (event) => {
   $("#auth-submit").textContent =
     state.mode === "register"
       ? "Create demo profile ↗"
-      : "Sign in to VaultBank ↗";
+      : "Sign in to NileBank ↗";
 });
 $("#logout").addEventListener("click", async () => {
   await busy($("#logout"), async () => {

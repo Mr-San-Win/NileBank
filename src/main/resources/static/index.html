@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="VaultBank is an educational digital banking simulator. All money is simulated."
+      content="NileBank is an educational digital banking simulator. All money is simulated."
     />
-    <title>VaultBank · Digital Banking Simulator</title>
+    <title>NileBank · Digital Banking Simulator</title>
     <link rel="icon" href="data:," />
     <link rel="stylesheet" href="/styles.css" />
     <script type="module" src="/app.js"></script>
@@ -26,8 +26,8 @@
     ></div>
     <main id="auth-view" class="auth-layout">
       <section class="auth-story">
-        <a class="brand" href="/" aria-label="VaultBank home"
-          ><span class="brand-icon">V</span> VaultBank<span class="brand-dot"
+        <a class="brand" href="/" aria-label="NileBank home"
+          ><span class="brand-icon">N</span> NileBank<span class="brand-dot"
             >.</span
           ></a
         >
@@ -56,7 +56,7 @@
       </section>
       <section class="auth-panel">
         <div class="auth-form-wrap">
-          <div class="section-kicker">WELCOME TO VAULTBANK</div>
+          <div class="section-kicker">WELCOME TO NILEBANK</div>
           <h2 id="auth-heading">Welcome back.</h2>
           <p id="auth-description" class="muted">
             Sign in to your personal demo account.
@@ -102,7 +102,7 @@
             </p>
             <div id="auth-error" class="form-error" role="alert" hidden></div>
             <button id="auth-submit" class="primary full-width" type="submit">
-              Sign in to VaultBank <span aria-hidden="true">↗</span>
+              Sign in to NileBank <span aria-hidden="true">↗</span>
             </button>
           </form>
           <p class="auth-disclaimer">
@@ -115,7 +115,7 @@
     <div id="bank-view" class="bank-layout" hidden>
       <aside class="sidebar">
         <a class="brand" href="/"
-          ><span class="brand-icon">V</span> VaultBank<span class="brand-dot"
+          ><span class="brand-icon">N</span> NileBank<span class="brand-dot"
             >.</span
           ></a
         >
@@ -193,7 +193,7 @@
                     ><span id="balance">—</span
                     ><span class="currency-code">THB</span>
                   </div>
-                  <div class="account-label">VAULTBANK VIRTUAL ACCOUNT</div>
+                  <div class="account-label">NILEBANK VIRTUAL ACCOUNT</div>
                   <div class="balance-bottom">
                     <span id="account-number" class="account-number"></span
                     ><button
@@ -204,7 +204,7 @@
                       Copy ↗
                     </button>
                   </div>
-                  <div class="balance-watermark" aria-hidden="true">V</div>
+                  <div class="balance-watermark" aria-hidden="true">N</div>
                 </section>
                 <section class="panel quick-actions">
                   <div class="panel-title">
@@ -221,7 +221,7 @@
                       ><small>Take funds out</small></button
                     ><button data-view="transfer">
                       <span class="action-icon blue">⇄</span
-                      ><strong>Transfer</strong><small>Send to VaultBank</small>
+                      ><strong>Transfer</strong><small>Send to NileBank</small>
                     </button>
                   </div>
                 </section>
@@ -254,7 +254,7 @@
                 <div class="section-kicker">MOVE WITH CONFIDENCE</div>
                 <h1>Transfer money.</h1>
                 <p class="muted">
-                  Send simulated THB to another VaultBank account.
+                  Send simulated THB to another NileBank account.
                 </p>
               </div>
             </div>
@@ -266,13 +266,13 @@
                   ><input
                     id="recipient"
                     required
-                    pattern="VB[A-Fa-f0-9]{20}"
+                    pattern="(?:NB|VB)[A-Fa-f0-9]{20}"
                     maxlength="22"
                     autocomplete="off"
-                    placeholder="VB followed by 20 characters"
+                    placeholder="NB followed by 20 characters"
                   />
                   <p class="field-help">
-                    Ask another demo user for their VaultBank account number.
+                    Ask another demo user for their NileBank account number.
                   </p>
                   <label for="transfer-amount">Amount (THB)</label
                   ><input
@@ -302,7 +302,7 @@
                 <span class="large-symbol">⇄</span>
                 <h2>Simple. Simulated. Secure.</h2>
                 <p>
-                  Transfers happen only between VaultBank demo accounts. Review
+                  Transfers happen only between NileBank demo accounts. Review
                   the account number and amount carefully before confirming.
                 </p>
                 <p>
@@ -351,7 +351,7 @@
           </section>
         </main>
         <footer class="bank-footer">
-          <span>© VaultBank · Digital Banking Simulator</span
+          <span>© NileBank · Digital Banking Simulator</span
           ><span>Educational project. All money is simulated.</span>
         </footer>
       </div>

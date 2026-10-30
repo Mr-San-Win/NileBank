@@ -1,16 +1,16 @@
-# VaultBank — Digital Banking Simulator
+# NileBank — Digital Banking Simulator
 
 A full-stack Java portfolio project demonstrating secure sessions, PostgreSQL transactions, explicit row locking, and retry-safe transfers through a responsive banking dashboard.
 
-**Educational demo only. All money is simulated THB. VaultBank is not a bank, does not connect to financial institutions, and cannot process real payments. Use fictional profile information and a demo password.**
+**Educational demo only. All money is simulated THB. NileBank is not a bank, does not connect to financial institutions, and cannot process real payments. Use fictional profile information and a demo password.**
 
-![Actual VaultBank dashboard](docs/screenshots/dashboard-desktop.jpg)
+![Actual NileBank dashboard](docs/screenshots/dashboard-desktop.jpg)
 
 ## Features
 
 - Register with a normalized unique email; sign in and out using server-side sessions.
 - Create one virtual THB account, initially funded with zero.
-- Deposit simulated money, withdraw within the available balance, and transfer to another VaultBank account.
+- Deposit simulated money, withdraw within the available balance, and transfer to another NileBank account.
 - Review a transfer before confirmation; replay the same idempotency key without moving funds again.
 - View persisted recent activity, paginated history, and account/profile details.
 - Responsive desktop/mobile layout, keyboard-accessible forms, visible demo notices, loading and error states.
@@ -61,7 +61,7 @@ Tests include registration, duplicate email, generic login errors, unauthenticat
 
 Observed verification and exact counts are maintained in [BUILD_LOG](docs/BUILD_LOG.md). GitHub Actions is configured to run tests and build the image, but remote CI cannot be claimed as executed until the repository is pushed.
 
-Observed on 30 October 2026: Java 21 `mvn -B verify` passed **31 tests, 0 failures, 0 errors, 0 skipped**, and packaged the executable JAR. The Docker build/start and database/application health checks passed. `pwsh -File scripts/smoke.ps1` passed the complete HTTP banking journey against Docker, including idempotent replay and cross-user ownership rejection. Browser QA verified the actual frontend on desktop and at a 390px mobile breakpoint. These are functional checks, not a performance benchmark or independent security audit.
+Observed on 30 October 2026: Java 21 `mvn -B verify` passed **31 tests, 0 failures, 0 errors, 0 skipped**, and packaged the executable JAR. The Docker build/start and database/application health checks passed. `python3 scripts/smoke.py` passed the complete HTTP banking journey against Docker, including idempotent replay and cross-user ownership rejection. Browser QA verified the actual frontend on desktop and at a 390px mobile breakpoint. These are functional checks, not a performance benchmark or independent security audit.
 
 For host Java development, use an independently running PostgreSQL instance and set `DB_URL`, `DB_USER`, and `DB_PASSWORD` in the process environment, then run `mvn spring-boot:run`. Spring Boot does not automatically load the Compose `.env` file. Use a fresh empty database so Flyway can create the schema.
 
@@ -149,5 +149,7 @@ Potential improvements: rate limits and authentication abuse monitoring, recover
 
 ## Further reading
 
-[Architecture](docs/ARCHITECTURE.md) · [API](docs/API.md) · [Interview guide](docs/INTERVIEW_GUIDE.md) · [Build evidence](docs/BUILD_LOG.md) · [Engineering rules](AGENTS.md)
+[Architecture](docs/ARCHITECTURE.md) · [API](docs/API.md) · [Interview guide](docs/INTERVIEW_GUIDE.md) · [WSL workspace](docs/WSL.md) · [Build evidence](docs/BUILD_LOG.md) · [Engineering rules](AGENTS.md)
 
+
+The current active workspace is /home/san_win/NileBank in Ubuntu. Native Ubuntu verification also passed all 31 tests after the NileBank rename. Run python3 scripts/smoke.py against the Docker app for a cross-platform HTTP smoke check; it uses the Python standard library only. The PowerShell alternative is intended for a local Windows checkout, not a UNC path blocked by Windows execution policy.

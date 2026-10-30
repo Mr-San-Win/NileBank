@@ -1,7 +1,7 @@
 name: Build and PostgreSQL tests
 on:
   push:
-    branches: [main, codex/vaultbank-mvp]
+    branches: [main, codex/nilebank-mvp]
   pull_request:
 permissions:
   contents: read
@@ -21,7 +21,7 @@ jobs:
       - name: Check JavaScript syntax
         run: node --check src/main/resources/static/app.js
       - name: Build application image
-        run: docker build -t vaultbank:ci .
+        run: docker build -t nilebank:ci .
       - name: Preserve test evidence
         if: always()
         uses: actions/upload-artifact@v4

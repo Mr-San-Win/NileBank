@@ -1,4 +1,4 @@
-# Talking about VaultBank
+# Talking about NileBank
 
 ## Why Spring Boot and PostgreSQL?
 Spring Boot integrates HTTP, validation, security, persistence and testing with conventional configuration. PostgreSQL supplies fixed-precision decimals, constraints, transactions and row locks. A single application keeps the project understandable.

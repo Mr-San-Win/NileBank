@@ -44,3 +44,18 @@
 - Final-source `docker compose up --build --wait --wait-timeout 180` succeeded; both services healthy. Reran smoke script against that final image successfully. Queried Flyway history: V1–V5 all successful. Runtime UID verified as 10001 (non-root).
 - GitHub Actions configured but not remotely executed. CLI still unauthenticated; no remote or push. User requested migration to WSL Ubuntu to use its GitHub setup. Ubuntu has Git, Java and Docker but no gh on PATH; destination /home/san_win/projects/vaultbank is unused. Windows source will be retained as a backup.
 
+
+## NileBank rename and direct WSL workspace — in progress
+- User renamed the product to NileBank and requested /home/san_win/NileBank as the active folder. Copied all six commits there, retained earlier copies, and created codex/nilebank-mvp.
+- Verified GitHub SSH as Mr-San-Win. Existing Mr-San-Win/NileBank repository contains a main README placeholder only; origin now points to that repository. Main is unchanged.
+- Renamed Java packages/application/artifact, frontend, documentation and container identity. New account/reference prefixes use NB; existing VB account numbers remain accepted for compatibility.
+- Original Flyway V1-V5 files remain unchanged. V6 updates application metadata. The ignored local environment retains DB_NAME=vaultbank and Docker project nilebank to preserve existing PostgreSQL data.
+- Milestone 6 commit: d91a063b72c963bb941f16d5963a3310dfbdd2a0. Native WSL verification pending; previous wrapper download was interrupted, not a passed build.
+
+### NileBank verification completed
+- Native Ubuntu Java 21 / Maven 3.9.11 verify: BUILD SUCCESS, 31 tests, 0 failures/errors/skips; executable target/nilebank-0.1.0.jar created (1 minute 13 seconds).
+- WSL Docker build and readiness succeeded. Flyway V1-V6 successful; application metadata is NileBank. Account count and total funds before/after migration both 4 / 180.50 THB.
+- python3 scripts/smoke.py passed against the WSL-built Docker app: auth/session/CSRF, new NB account/reference IDs, deposit, withdrawal, transfer, replay, ownership, history and logout.
+- Native browser verified NileBank title, N brand mark, registration/login, zero account with NB identifier and persisted 10,000.00 simulated deposit. Genuine desktop/mobile screenshots refreshed.
+- A trailing CR in a temporary shell helper caused its final empty line to exit nonzero after all Docker checks had succeeded; application build/readiness/migration/data comparisons succeeded independently. Windows refused executing a PowerShell smoke file over UNC; no security policy was changed, and the native Python check passed instead.
+- Source rename is verified and ready to commit. Next: connect the existing main README history and push only codex/nilebank-mvp.
