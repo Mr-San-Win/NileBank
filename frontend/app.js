@@ -602,6 +602,20 @@ $("#next-page").addEventListener("click", async () => {
 
 async function init() {
   authMode("login");
+  const params = new URLSearchParams(location.search);
+  if (params.has("authError")) {
+    if (params.get("authError") === "google")
+      notify("Google sign-in could not be completed. Try again or use your existing sign-in method.", true);
+    params.delete("authError");
+    history.replaceState(null, "", location.pathname + (params.size ? "?" + params : "") + location.hash);
+  }
+  try {
+    const options = await api("/auth/options");
+    $("#google-signin").hidden = !options.googleEnabled;
+    $("#google-help").hidden = !options.googleEnabled;
+  } catch {
+    // Password sign-in remains available if optional-provider discovery fails.
+  }
   try {
     await refreshCsrf();
     try {
@@ -615,5 +629,18 @@ async function init() {
     notify(error.message, true);
   }
 }
+$("#google-signin").addEventListener("click", (event) => {
+  const link = event.currentTarget;
+  if (link.getAttribute("aria-disabled") === "true") { event.preventDefault(); return; }
+  link.setAttribute("aria-disabled", "true");
+  link.setAttribute("aria-busy", "true");
+  link.textContent = "Connecting to Google…";
+});
+window.addEventListener("pageshow", () => {
+  const link = $("#google-signin");
+  link.removeAttribute("aria-disabled");
+  link.removeAttribute("aria-busy");
+  link.textContent = "Continue with Google";
+});
 extensions.init();
 init();

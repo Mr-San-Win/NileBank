@@ -112,3 +112,13 @@ See [currency exchange, fictional banks and finance tracking](EXTENSIONS.md) for
 ### Exchange quote precision
 
 `POST /api/v1/exchange/quotes` retains the existing JSON contract. Monetary response values remain decimal strings. `amount` and `receivedAmount` are the binding persisted terms. `rate` remains an eight-decimal string and is an approximate display rate; clients must not reconstruct settlement from it. `notice` explains the distinction. `POST /exchange/quotes/{id}/execute` uses the stored amount and returns the original result on matching replay, without repricing from a provider refresh. The received amount rounds down once at the destination minor unit; THB, USD and EUR all currently use two decimals. No exchange fee is applied.
+
+## Optional Google authentication
+
+`GET /api/v1/auth/options` is public and returns `{ "googleEnabled": false }` by
+default. When enabled, navigate the browser to `/oauth2/authorization/google`.
+Spring handles `/login/oauth2/code/google`; neither is a JSON claims endpoint.
+Success redirects to `/`; failure redirects to `/?authError=google` with no provider
+details or tokens. Refresh `/api/v1/auth/csrf` and `/api/v1/auth/me` after login.
+Existing password endpoints and POST logout retain their contracts and CSRF checks.
+See [authentication design/setup](AUTHENTICATION.md).

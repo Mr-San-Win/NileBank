@@ -87,3 +87,14 @@ This is a layered monolith with account balances and immutable audit history, no
 ## Source layout and build
 
 `backend/` owns Maven, Java, configuration, Flyway migrations, tests and the application Dockerfile. `frontend/` owns the unmodified HTML/CSS/ES modules. Maven resources configuration packages the sibling frontend directory into the classpath static directory, so both the packaged JAR and test server expose the same URLs as before. No generated assets are checked in. Root Compose builds with context `.` and Dockerfile `backend/Dockerfile`; the image is still one non-root Java service. CI runs a clean backend build, frontend syntax checks and the root-context image build. This refactor changes paths and packaging only; APIs, schema contents, session/CSRF behavior and transaction logic are unchanged.
+
+## External authentication
+
+V10 adds issuer/subject identity bindings to the existing internal user UUID, with
+one identity per provider per user. Password hashes are nullable for external-only
+users; those users cannot authenticate by password. Google OIDC is an optional,
+default-off Spring Security OAuth2 Client integration. The browser redirects through
+Google; code exchange and tokens stay on the server. Both login methods use the
+same UUID-based ownership model, sessions and CSRF protection. See
+[authentication design](AUTHENTICATION.md) for transaction recovery, validation,
+configuration and deployment limitations. Matching email addresses never link users.

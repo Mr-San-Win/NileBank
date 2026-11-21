@@ -2,13 +2,14 @@
 
 A full-stack Java portfolio project demonstrating secure sessions, PostgreSQL transactions, explicit row locking, and retry-safe transfers through a responsive banking dashboard.
 
-**Educational demo only. All money is simulated (THB, USD and EUR). NileBank is not a bank, does not connect to financial institutions, and cannot process real payments. Use fictional profile information and a demo password.**
+**Educational demo only. All money is simulated (THB, USD and EUR). NileBank is not a bank, does not connect to financial institutions, and cannot process real payments. Use fictional profile information and a demo password for password registration. Optional Google Sign-In shares your Google name and email; no real banking information is required.**
 
 ![Actual NileBank dashboard](docs/screenshots/dashboard-desktop.jpg)
 
 ## Features
 
 - Register with a normalized unique email; sign in and out using server-side sessions.
+- Optional Google OpenID Connect Sign-In (disabled by default), with server-side token validation and safe internal identity mapping.
 - Create one virtual THB account, initially funded with zero.
 - Deposit simulated money, withdraw within the available balance, and transfer to another NileBank account.
 - Review a transfer before confirmation; replay the same idempotency key without moving funds again.
@@ -61,6 +62,13 @@ The application port binds to loopback only. PostgreSQL is available only on the
 
 No preloaded login credentials exist. Register a fictional profile and create its virtual account. Add simulated funds, then create a second user/account (sign out first or use a separate browser profile) to demonstrate transfers. A normal second tab shares the same login cookie.
 
+## Optional Google Sign-In
+
+The application works without Google credentials. To enable Google, follow the
+[OAuth client setup and authentication guide](docs/AUTHENTICATION.md). Supply the
+client ID/secret only through your ignored environment and register the exact
+callback URI. No account linking or recovery shortcut is enabled by matching emails.
+
 ## Tests and development
 
 Java 21 and Docker are required for the full suite. Node.js 20+ is needed for JavaScript syntax checks, and Python 3 for the optional HTTP smoke scripts. No frontend dependencies need installation. PostgreSQL integration tests are mandatory and fail if Docker is unavailable; they are not silently skipped.
@@ -82,6 +90,12 @@ Tests include registration, duplicate email, generic login errors, unauthenticat
 The GitHub Actions workflow runs PostgreSQL tests through the backend Maven wrapper, checks both frontend JavaScript modules and builds the single application image. Refactor verification results are documented in [the structural refactor guide](docs/REFACTOR.md).
 
 Observed on 30 October 2026: Java 21 `mvn -B verify` passed **56 tests, 0 failures, 0 errors, 0 skipped**, and packaged the executable JAR. The Docker build/start and database/application health checks passed. Both `python3 scripts/smoke.py` and `python3 scripts/smoke_extensions.py` passed; the former verifies the complete HTTP banking journey against Docker, including idempotent replay and cross-user ownership rejection. Browser QA verified the actual frontend on desktop and at a 390px mobile breakpoint. These are functional checks, not a performance benchmark or independent security audit.
+
+Latest authentication verification (21 November 2026): `sh mvnw -B clean verify`
+passed **112 tests, 0 failures, 0 errors, 0 skipped** on PostgreSQL 17.11
+Testcontainers. This includes the existing 97-test foundation plus real Spring OIDC
+callback tests against a local signed-token/JWKS provider. No real Google client,
+public deployment or new browser walkthrough was verified by this test run.
 
 For host Java development, use an independently running PostgreSQL instance and set `DB_URL`, `DB_USER`, and `DB_PASSWORD` in the process environment, then run `mvn -f backend/pom.xml spring-boot:run`. Spring Boot does not automatically load the Compose `.env` file. Use a fresh empty database so Flyway can create the schema.
 
@@ -122,7 +136,8 @@ Feature packages: `auth`, `user`, `account`, `transaction`, `transfer`, `exchang
 
 ## Database
 
-- `app_users`: UUID, name, normalized unique email, BCrypt password hash, creation timestamp.
+- `app_users`: UUID, name, normalized unique email, optional BCrypt password hash, creation timestamp.
+- `auth_identities`: user FK, provider, validated issuer/subject uniqueness and one identity per provider per user.
 - `bank_accounts`: UUID, unique owner FK, generated unique account number, THB currency constraint, numeric(19,2) nonnegative balance, ACTIVE/FROZEN status, optimistic version, creation timestamp.
 - `banking_transactions`: UUID, type/status, positive bounded numeric amount, source/destination FKs, unique reference, timestamp, sender-scoped idempotency key.
 - currency_wallets and exchange_quotes: foreign balances, expiring agreed rates and replay-safe execution with source provenance.
