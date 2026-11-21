@@ -1,6 +1,7 @@
 # FX settlement rollout
 
-This procedure requires a full application maintenance window. There is no built-in
+This procedure requires a full application maintenance window. Apply the same drain
+when changing FX_REFERENCE_PROVIDER; do not mix provider configurations across live instances. There is no built-in
 quote-only maintenance switch or settlement-version field. An old unexpired quote
 can still execute its persisted old settlement amount. Do not deploy the correction
 with such quotes executable, and do not reprice or delete existing quote rows.

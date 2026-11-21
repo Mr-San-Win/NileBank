@@ -41,7 +41,7 @@ public class ExchangeService {
         snapshot.provider(),
         snapshot.rateDate(),
         snapshot.fetchedAt(),
-        ExchangeRateProvider.SUPPORTED_CURRENCIES.stream()
+        snapshot.currencies().stream()
             .map(c -> new Rate(c, snapshot.thbPerUnit().get(c).toPlainString()))
             .toList());
   }
@@ -52,7 +52,7 @@ public class ExchangeService {
   public List<Wallet> wallets(UUID owner) {
     UUID account = ledger.ownedId(owner);
     return ExchangeRateProvider.SUPPORTED_CURRENCIES.stream()
-        .map(c -> new Wallet(c, ledger.balance(account, c).toPlainString()))
+        .map(c -> new Wallet(c, SupportedCurrency.display(c, ledger.balance(account, c))))
         .toList();
   }
 
@@ -77,8 +77,8 @@ public class ExchangeService {
         q.id(),
         q.fromCurrency(),
         q.toCurrency(),
-        q.amount().toPlainString(),
-        q.receivedAmount().toPlainString(),
+        SupportedCurrency.display(q.fromCurrency(), q.amount()),
+        SupportedCurrency.display(q.toCurrency(), q.receivedAmount()),
         q.rate().toPlainString(),
         q.expiresAt(),
         q.transactionId() == null ? "OPEN" : "EXECUTED",
@@ -94,7 +94,7 @@ public class ExchangeService {
 
   @Transactional
   public QuoteView quote(UUID owner, String from, String to, BigDecimal amount) {
-    amount = Money.validate(amount);
+    amount = SupportedCurrency.amount(from, amount);
     if (from == null
         || to == null
         || !ExchangeRateProvider.SUPPORTED_CURRENCIES.contains(from)
@@ -113,7 +113,7 @@ public class ExchangeService {
     var conversion = snapshot.conversion(from, to);
     BigDecimal rate =
         conversion.numerator().divide(conversion.denominator(), 8, RoundingMode.HALF_EVEN);
-    int destinationScale = Currency.getInstance(to).getDefaultFractionDigits();
+    int destinationScale = SupportedCurrency.scale(to);
     // One final rounding step. The rounded display rate must never determine credited funds.
     BigDecimal received =
         amount
@@ -169,7 +169,9 @@ public class ExchangeService {
                 + quote.fromCurrency()
                 + " → "
                 + quote.toCurrency()
-                + " · ECB "
+                + " · "
+                + quote.provider()
+                + " "
                 + quote.rateDate());
     quotes.executed(id, audit.id());
     return view(quotes.find(id, owner).orElseThrow());

@@ -357,16 +357,17 @@
             </section>
           </section>
 <section id="exchange-view" class="view" hidden>
-  <div class="page-heading"><div><div class="section-kicker">REAL REFERENCE RATES · SIMULATED MONEY</div><h1>Currency exchange.</h1><p class="muted">Keep THB, USD and EUR in your own virtual wallets.</p></div><button id="fx-refresh" class="secondary">Refresh rates ↻</button></div>
+  <div class="page-heading"><div><div class="section-kicker">REAL REFERENCE RATES · SIMULATED MONEY</div><h1>Currency exchange.</h1><p class="muted">Keep THB, USD, EUR, MMK, SGD, JPY and CNY in your own virtual wallets.</p></div><button id="fx-refresh" class="secondary">Refresh rates ↻</button></div>
   <div id="fx-wallets" class="summary-grid" aria-live="polite"></div>
-  <div class="feature-note"><strong>Real data, simulated exchange.</strong> Rates come from Frankfurter / the European Central Bank. They are published reference rates, not intraday trading prices. Refresh requests the latest publication. <a href="https://frankfurter.dev/" target="_blank" rel="noopener noreferrer">Source ↗</a></div>
+  <div class="feature-note"><strong>Real data, simulated exchange.</strong> Rates come from a pinned central-bank source through Frankfurter (CBM by default; ECB is optional). They are published reference rates, not intraday trading prices. Refresh requests the latest publication. <a href="https://frankfurter.dev/" target="_blank" rel="noopener noreferrer">Source ↗</a></div>
   <div id="fx-rate-status" class="rate-strip" role="status">Loading latest reference rates…</div>
   <div class="form-layout"><section class="panel form-panel"><h2>Get a conversion quote</h2>
     <form id="fx-form"><div class="field-pair"><div><label for="fx-from">From currency</label><select id="fx-from"><option>THB</option><option>USD</option><option>EUR</option></select></div><div><label for="fx-to">To currency</label><select id="fx-to"><option>USD</option><option>EUR</option><option>THB</option></select></div></div>
     <label for="fx-amount">Amount to exchange</label><input id="fx-amount" type="text" inputmode="decimal" pattern="[0-9]+([.][0-9]{1,2})?" required placeholder="0.00"><p class="field-help">Maximum 1,000,000 THB equivalent. No fee. Quotes last 2 minutes.</p>
+    <p id="fx-precision" class="field-help"></p>
     <div id="fx-error" class="form-error" role="alert" hidden></div><button id="fx-quote-button" class="primary full-width">Get latest quote ↗</button></form>
     <div id="fx-review" class="review-panel" hidden><h3>Review your conversion</h3><dl id="fx-details"></dl><p id="fx-expiry" class="field-help"></p><button id="fx-confirm" class="primary full-width">Confirm simulated exchange</button></div>
-  </section><aside class="panel help-panel"><span class="large-symbol">↔</span><h2>Your money stays yours.</h2><p>A conversion moves simulated funds between your own wallets. It does not count as income or an expense in the finance tracker.</p><p>The approximate reference rate, publication date and agreed received amount are saved with your quote. Repeating an executed quote never converts money twice.</p><p>The received amount rounds down to two decimals; very small conversions may be rejected.</p></aside></div>
+  </section><aside class="panel help-panel"><span class="large-symbol">↔</span><h2>Your money stays yours.</h2><p>A conversion moves simulated funds between your own wallets. It does not count as income or an expense in the finance tracker.</p><p>The approximate reference rate, publication date and agreed received amount are saved with your quote. Repeating an executed quote never converts money twice.</p><p>The received amount rounds down to the destination minor unit. JPY uses whole yen; very small conversions may be rejected.</p></aside></div>
 </section>
 <section id="security-view" class="view" hidden>
   <div class="page-heading"><div><div class="section-kicker">ACCOUNT SETTINGS</div><h1>Keep your sign-in secure.</h1><p class="muted">Manage authentication methods for your demo profile. Never enter real bank credentials.</p></div></div>

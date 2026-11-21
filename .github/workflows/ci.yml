@@ -25,6 +25,7 @@ jobs:
           for file in frontend/*.js; do
             node --check --input-type=module < "$file"
           done
+          node scripts/check_currency_format.mjs
       - name: Build application image
         run: docker build -f backend/Dockerfile -t nilebank:ci .
       - name: Preserve test evidence

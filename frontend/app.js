@@ -1,3 +1,4 @@
+import { configureCurrencies, formatMoney as money } from "./currency.js";
 import { createSecurity } from "./security.js";
 import { createExtensions } from "./extensions.js";
 const $ = (selector) => document.querySelector(selector);
@@ -112,15 +113,6 @@ async function busy(button, action) {
   }
 }
 
-// Format decimal strings for display without doing floating-point money arithmetic.
-function money(value) {
-  const [whole, fraction = ""] = String(value ?? "0").split(".");
-  return (
-    whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",") +
-    "." +
-    fraction.padEnd(2, "0").slice(0, 2)
-  );
-}
 function date(value) {
   return new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",
@@ -239,6 +231,7 @@ async function showBank() {
     .toUpperCase();
   $("#greeting").textContent =
     "Welcome back, " + state.user.fullName.split(/\s+/)[0] + ".";
+  configureCurrencies(await api("/exchange/currencies"));
   await loadAccount();
   await navigate("overview");
 }
@@ -354,7 +347,7 @@ function renderHistory(target, transactions) {
     row.append(
       node(
         "td",
-        (incoming ? "+" : "−") + " " + ({THB:"฿",USD:"$",EUR:"€"}[transaction.currency || "THB"]) + money(transaction.amount),
+        (incoming ? "+" : "−") + " " + ({THB:"฿",USD:"$",EUR:"€",MMK:"K ",SGD:"S$",JPY:"¥",CNY:"CN¥"}[transaction.currency || "THB"]) + money(transaction.amount, transaction.currency || "THB"),
         "amount" + (incoming ? " in" : ""),
       ),
     );

@@ -2,7 +2,7 @@
 
 A full-stack Java portfolio project demonstrating secure sessions, PostgreSQL transactions, explicit row locking, and retry-safe transfers through a responsive banking dashboard.
 
-**Educational demo only. All money is simulated (THB, USD and EUR). NileBank is not a bank, does not connect to financial institutions, and cannot process real payments. Use fictional profile information and a demo password for password registration. Optional Google Sign-In shares your Google name and email; no real banking information is required.**
+**Educational demo only. All money is simulated (THB, USD, EUR, MMK, SGD, JPY and CNY). NileBank is not a bank, does not connect to financial institutions, and cannot process real payments. Use fictional profile information and a demo password for password registration. Optional Google Sign-In shares your Google name and email; no real banking information is required.**
 
 ![Actual NileBank dashboard](docs/screenshots/dashboard-desktop.jpg)
 
@@ -20,7 +20,7 @@ A full-stack Java portfolio project demonstrating secure sessions, PostgreSQL tr
 
 ## Exchange, demo banks and finance
 
-- Real ECB reference rates fetched via Frankfurter on refresh, with dated 120-second THB/USD/EUR exchange quotes.
+- Pinned official reference rates fetched through Frankfurter on refresh; seven-currency wallets and dated 120-second quotes. CBM covers all seven; optional ECB mode explicitly excludes MMK quotes.
 - Fictional partner-bank connections and atomic, idempotent simulated movements.
 - Manual personal finance entries, category budgets, savings goals and explainable monthly spending insights.
 
@@ -80,6 +80,7 @@ sh mvnw -B clean verify
 cd ..
 node --check frontend/app.js
 node --check frontend/extensions.js
+node scripts/check_currency_format.mjs
 python3 scripts/smoke.py
 python3 scripts/smoke_extensions.py
 ```
@@ -99,6 +100,8 @@ callback tests against a local signed-token/JWKS provider. No real Google client
 public deployment or new browser walkthrough was verified by this test run.
 
 AUTH-002 verification passed **132 tests, 0 failures, 0 errors, 0 skipped** on PostgreSQL 17.11, including account linking, credential revocation and abuse controls. See [account security](docs/ACCOUNT_SECURITY.md) for limits and unavailable recovery/MFA.
+
+FX-002 verification passed **143 tests, 0 failures, 0 errors, 0 skipped**. The actual default provider fetch also returned all seven currencies. See [currency precision and reference-source policy](docs/CURRENCIES.md).
 
 For host Java development, use an independently running PostgreSQL instance and set `DB_URL`, `DB_USER`, and `DB_PASSWORD` in the process environment, then run `mvn -f backend/pom.xml spring-boot:run`. Spring Boot does not automatically load the Compose `.env` file. Use a fresh empty database so Flyway can create the schema.
 
@@ -193,7 +196,7 @@ Screenshots were captured from the running app using fictional users and persist
 
 ## Limitations and future improvements
 
-One primary THB account with USD/EUR exchange wallets. Ordinary withdrawals and account-to-account transfers use THB. No password reset, email verification, MFA, admin UI, or self-service freeze action. Basic per-process authentication rate limiting is implemented; distributed abuse protection still needs a trusted ingress. Frozen state is enforced in the backend and integration tests. Sessions live in application memory and expire on restart. The UI keeps a pending transfer key in tab memory: after a reload or uncertain response, inspect history before starting a fresh transfer. Deposits/withdrawals do not have idempotency keys; an ambiguous response must be checked before retrying.
+One primary THB account with USD/EUR/MMK/SGD/JPY/CNY exchange wallets. JPY uses whole yen; other supported currencies use two decimals. Ordinary withdrawals and account-to-account transfers use THB. No password reset, email verification, MFA, admin UI, or self-service freeze action. Basic per-process authentication rate limiting is implemented; distributed abuse protection still needs a trusted ingress. Frozen state is enforced in the backend and integration tests. Sessions live in application memory and expire on restart. The UI keeps a pending transfer key in tab memory: after a reload or uncertain response, inspect history before starting a fresh transfer. Deposits/withdrawals do not have idempotency keys; an ambiguous response must be checked before retrying.
 
 History contains successful financial operations only. The database owner could alter/disable its trigger; it is not an externally tamper-proof ledger. No independent security audit or performance benchmarks have been performed. No public deployment or real payment integrations exist.
 

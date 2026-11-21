@@ -1,0 +1,13 @@
+import { readFile } from "node:fs/promises";
+import assert from "node:assert/strict";
+const code = await readFile(new URL("../frontend/currency.js", import.meta.url), "utf8");
+const { configureCurrencies, formatMoney } = await import("data:text/javascript;base64," + Buffer.from(code).toString("base64"));
+configureCurrencies(["THB", "USD", "EUR", "MMK", "SGD", "JPY", "CNY"].map(code => ({ code, fractionDigits: code === "JPY" ? 0 : 2 })));
+assert.equal(formatMoney("99999999999999999.99", "USD"), "99,999,999,999,999,999.99");
+assert.equal(formatMoney("123456.00", "JPY"), "123,456");
+assert.equal(formatMoney("1000.10", "MMK"), "1,000.10");
+assert.equal(formatMoney("-23.20", "THB"), "-23.20");
+assert.throws(() => formatMoney("1.50", "JPY"));
+assert.throws(() => formatMoney("12.345", "USD"));
+assert.throws(() => configureCurrencies([{code:"THB",fractionDigits:-1}]));
+console.log("7 exact currency formatting assertions passed");

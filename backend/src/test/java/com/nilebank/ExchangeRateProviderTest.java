@@ -14,11 +14,31 @@ import org.springframework.http.HttpStatus;
 class ExchangeRateProviderTest {
   Map<String, BigDecimal> weights() {
     return new HashMap<>(
-        Map.of("THB", BigDecimal.ONE, "USD", new BigDecimal("35"), "EUR", new BigDecimal("38")));
+        Map.of(
+            "THB",
+            BigDecimal.ONE,
+            "USD",
+            new BigDecimal("35"),
+            "EUR",
+            new BigDecimal("38"),
+            "MMK",
+            new BigDecimal("0.02"),
+            "SGD",
+            new BigDecimal("25"),
+            "JPY",
+            new BigDecimal("0.25"),
+            "CNY",
+            new BigDecimal("5")));
   }
 
   Snapshot snapshot(Map<String, BigDecimal> normalized, Map<String, BigDecimal> raw) {
-    return new Snapshot("fixture", LocalDate.of(2026, 11, 20), Instant.EPOCH, normalized, raw);
+    return new Snapshot(
+        "fixture",
+        LocalDate.of(2026, 11, 20),
+        Instant.EPOCH,
+        normalized,
+        raw,
+        ExchangeRateProvider.SUPPORTED_CURRENCIES);
   }
 
   void invalid(Runnable operation) {

@@ -48,4 +48,40 @@ class RateProviderTest {
     assertThat(r.conversion("EUR", "USD").denominator()).isEqualByComparingTo("1");
     assertThat(r.thbPerUnit().get("USD").scale()).isEqualTo(8);
   }
+
+  @Test
+  void parsesCompleteSevenCurrencyReferenceSnapshotAndRejectsIncompleteResponse() throws Exception {
+    var mapper = JsonMapper.builder().findAndAddModules().build();
+    var rows = new java.util.ArrayList<java.util.Map<String, Object>>();
+    for (var code : com.nilebank.exchange.SupportedCurrency.codes()) {
+      if (code.equals("EUR")) continue;
+      rows.add(
+          java.util.Map.of(
+              "date",
+              "2026-10-29",
+              "base",
+              "EUR",
+              "quote",
+              code,
+              "rate",
+              new java.math.BigDecimal("1.234567890123456789")));
+    }
+    var parsed =
+        provider.parse(
+            mapper.writeValueAsString(rows),
+            now,
+            com.nilebank.exchange.SupportedCurrency.codes(),
+            "CBM deterministic fixture");
+    assertThat(parsed.currencies()).hasSize(7);
+    assertThat(parsed.unitsPerEuro().get("MMK")).isEqualByComparingTo("1.234567890123456789");
+    rows.removeFirst();
+    assertThatThrownBy(
+            () ->
+                provider.parse(
+                    mapper.writeValueAsString(rows),
+                    now,
+                    com.nilebank.exchange.SupportedCurrency.codes(),
+                    "CBM deterministic fixture"))
+        .isInstanceOf(ApiException.class);
+  }
 }

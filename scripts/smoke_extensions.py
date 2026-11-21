@@ -12,7 +12,7 @@ def main():
     first = user.request("GET", "/exchange/rates")
     second = user.request("GET", "/exchange/rates")
     assert first["mode"] == "REAL_REFERENCE_RATES"
-    assert first["provider"] == "Frankfurter / European Central Bank"
+    assert first["provider"] in {"Frankfurter / European Central Bank", "Frankfurter / Central Bank of Myanmar (official reference)"}
     assert first["fetchedAt"] != second["fetchedAt"]
     quote = user.request("POST", "/exchange/quotes", {"fromCurrency": "THB", "toCurrency": "USD", "amount": "350.00"})
     assert quote["provider"] == first["provider"] and quote["rateDate"]

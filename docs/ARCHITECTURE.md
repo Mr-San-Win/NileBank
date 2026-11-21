@@ -63,7 +63,7 @@ Deposits/withdrawals and manual tracker additions do not have idempotency keys. 
 
 ## Foreign exchange flow
 
-1. Refresh and quote creation request Frankfurter v2 ECB EUR-base THB/USD data over HTTPS. Only currency parameters are sent, not user information.
+1. Refresh and quote creation request Frankfurter v2 pinned official reference data over HTTPS. Only currency parameters are sent, not user information.
 2. The provider validates response shape, currencies, positive rates, common publication date and a maximum seven-day age. Timeouts or invalid/unavailable data reject new quotes with HTTP 503; no fixed fallback exists.
 3. The provider keeps the original EUR-base decimal rates for settlement, separately from approximate THB-per-unit display rates. The service calculates the received amount directly from the exact ratio, with one final downward rounding using Java currency metadata, and checks the THB-equivalent limit by cross-multiplication. It persists a 120-second quote with authoritative source/received amounts, approximate eight-decimal display rate, source, publication date and retrieval time. The network fetch occurs before acquiring the monetary account lock.
 4. Confirmation locks the owning account, checks eligibility, expiry and available funds, debits and credits the persisted amounts without recalculating them from the display rate, appends history and marks execution in one transaction.
@@ -98,3 +98,5 @@ Google; code exchange and tokens stay on the server. Both login methods use the
 same UUID-based ownership model, sessions and CSRF protection. See
 [authentication design](AUTHENTICATION.md) for transaction recovery, validation,
 configuration and deployment limitations. Matching email addresses never link users.
+
+Seven-currency coverage, precision, source policy and verification: [currency guide](CURRENCIES.md).

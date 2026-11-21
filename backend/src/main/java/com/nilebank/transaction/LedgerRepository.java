@@ -76,6 +76,10 @@ public class LedgerRepository {
   /** Call only while holding the parent account write lock, even for foreign wallets. */
   public void adjust(LockedAccount account, String currency, BigDecimal delta) {
     account.requireActive();
+    delta =
+        delta.setScale(
+            com.nilebank.exchange.SupportedCurrency.scale(currency),
+            java.math.RoundingMode.UNNECESSARY);
     BigDecimal next = balance(account.id(), currency).add(delta);
     if (next.signum() < 0)
       throw new ApiException(HttpStatus.CONFLICT, "Insufficient " + currency + " funds");

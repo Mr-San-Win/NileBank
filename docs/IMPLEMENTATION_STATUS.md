@@ -20,7 +20,7 @@ public reverse-proxy behavior still require external setup and verification.
 | Milestone | Existing baseline | Remaining work |
 | --- | --- | --- |
 | AUTH-002 | Explicit password-proof linking/unlinking, method settings, password changes, database session revocation, bounded IP limits and redacted security events; 132 tests pass | Recovery lacks verified delivery and remains unavailable. MFA is not implemented. Production ingress abuse controls still require setup. |
-| FX-002 | THB/USD/EUR, fixed rounding, exact snapshots, atomic execution/replay | Seven-currency metadata, wallet/schema changes, currency-specific source precision, UI formatting; research provider coverage including MMK. Do not fabricate unavailable rates. |
+| FX-002 | Seven-currency wallets, JPY precision, all 42 directions, exact snapshots, atomic execution/replay and provider attribution; 143 tests pass | CBM default fetch verified for all seven; ECB mode intentionally has no MMK quotes. No public deployment or market-price claim. |
 | FIN-001 | Manual THB entries, deletion/month paging, fixed categories, monthly budgets and deterministic insights | Editing, user categories and safe deletion, richer filters/sorts, recurring rules and idempotent occurrence generation. |
 | SAVE-001 | Planning goals and allocations only, separate from banking | Real simulated savings accounts and atomic audited main/savings transfers; ownership, retry keys, concurrency and conservation tests. |
 | BANK-001 | Existing banking/FX/partner regression tests remain passing | Re-review new financial operations as added, including retry behavior and audit coverage. No wholesale rewrite. |
@@ -31,11 +31,11 @@ public reverse-proxy behavior still require external setup and verification.
 
 ## Next safe implementation sequence
 
-AUTH-002 core is implemented and locally verified with 132 tests. Continue FX-002:
-verify rate sources and MMK coverage, add currency metadata and a new migration,
-preserve exact-ratio settlement and original three-currency regressions, add all-pair
-precision/conservation/concurrency tests, then update the UI and documentation.
-Recovery/MFA remain explicit limitations; no insecure shortcut is enabled.
+AUTH-002 core is implemented (recovery/MFA unavailable). FX-002 is implemented with
+143 passing tests and a successful actual reference-provider fetch. Continue FIN-001:
+entry editing/filtering, owner-scoped editable categories, recurring rules and
+idempotent occurrence generation. Keep manual finance separate from bank balances.
+Then implement real simulated savings accounts and complete operational preparation.
 
 ## Commands and constraints
 
@@ -44,7 +44,7 @@ existing ignored cache via `-Dmaven.repo.local=/home/san_win/NileBank/.tools/m2`
 that is an environment-specific optimization, not a prerequisite for another machine.
 Docker must be running; PostgreSQL integration tests do not skip themselves.
 
-Never edit applied V1-V10 migrations, discard local work, fabricate live rates,
+Never edit applied V1-V12 migrations, discard local work, fabricate live rates,
 create real credentials, push, merge or deploy without the relevant authorization.
 Do not treat this checkpoint as completion of the entire approved expansion.
 

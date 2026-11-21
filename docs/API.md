@@ -106,7 +106,7 @@ On 403, fetch a new CSRF token before submitting again. Do not automatically ret
 
 ## Current extensions
 
-See [currency exchange, fictional banks and finance tracking](EXTENSIONS.md) for the new schema, API, transaction guarantees, demonstration steps and limitations. The base account remains THB; foreign wallets support USD/EUR using real daily reference rates. Tracker entries and savings allocations are planning records separate from bank balances.
+See [currency exchange, fictional banks and finance tracking](EXTENSIONS.md) for the new schema, API, transaction guarantees, demonstration steps and limitations. The base account remains THB; foreign wallets support USD/EUR/MMK/SGD/JPY/CNY using real daily reference rates. Tracker entries and savings allocations are planning records separate from bank balances.
 
 
 ### Exchange quote precision
@@ -137,3 +137,5 @@ Authenticated endpoints (POSTs require CSRF):
 The last sign-in method cannot be removed. Google must be enabled to initiate linking.
 Authentication abuse returns 429 with Retry-After. Recovery/MFA endpoints do not exist.
 See [account security and limitations](ACCOUNT_SECURITY.md).
+
+Seven-currency coverage, precision, source policy and verification: [currency guide](CURRENCIES.md).

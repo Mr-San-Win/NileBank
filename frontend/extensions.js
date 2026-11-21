@@ -2,9 +2,10 @@ export function createExtensions({ api, notify, money, node, getUser, getAccount
   const $ = (selector) => document.querySelector(selector);
   let generation = 0, quote = null, pendingBank = null, connections = [], categories = null;
   let financePage = 0, financeRequest = 0;
-  const symbols = { THB: "฿", USD: "$", EUR: "€" };
+  const symbols = { THB: "฿", USD: "$", EUR: "€", MMK: "K ", SGD: "S$", JPY: "¥", CNY: "CN¥" };
+  let currencyDetails = [];
   const label = (value) => value.toLowerCase().replaceAll("_", " ").replace(/\b\w/g, c => c.toUpperCase());
-  const cash = (value, currency = "THB") => (symbols[currency] || currency + " ") + money(value);
+  const cash = (value, currency = "THB") => (symbols[currency] || currency + " ") + money(value, currency);
   const today = () => {
     const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
     return ["year", "month", "day"].map(type => parts.find(p => p.type === type).value).join("-");
@@ -41,8 +42,15 @@ export function createExtensions({ api, notify, money, node, getUser, getAccount
   function clearQuote() { quote = null; $("#fx-review").hidden = true; }
   async function loadWallets() {
     const ticket = generation;
-    const wallets = await api("/exchange/wallets");
+    const [wallets, metadata] = await Promise.all([api("/exchange/wallets"), api("/exchange/currencies")]);
     if (ticket !== generation || !getUser()) return;
+    currencyDetails = metadata;
+    for (const [id, fallback] of [["#fx-from", "THB"], ["#fx-to", "USD"]]) {
+      const select = $(id), current = select.value; select.replaceChildren();
+      for (const item of metadata) { option(select, item.code, item.code); select.lastChild.defaultSelected = item.code === fallback; }
+      select.value = current || fallback;
+    }
+    syncFxAmount();
     stats($("#fx-wallets"), wallets.map(w => [w.currency + " WALLET", cash(w.balance, w.currency), "Simulated funds"]));
   }
   async function refreshRates() {
@@ -52,8 +60,14 @@ export function createExtensions({ api, notify, money, node, getUser, getAccount
     try {
       const data = await api("/exchange/rates");
       if (ticket !== generation || !getUser()) return;
-      const text = data.rates.filter(r => r.currency !== "THB").map(r => "1 " + r.currency + " = " + money(r.thbPerUnit) + " THB").join("   ·   ");
+      const text = data.rates.filter(r => r.currency !== "THB").map(r => "1 " + r.currency + " = " + r.thbPerUnit + " THB").join("   ·   ");
       $("#fx-rate-status").textContent = text + " | " + data.provider + " | Published " + data.rateDate + " | Retrieved " + new Date(data.fetchedAt).toLocaleString() + ". Reference rates may remain unchanged until the next publication.";
+      const available = new Set(data.rates.map(rate => rate.currency));
+      for (const id of ["#fx-from", "#fx-to"]) {
+        for (const item of $(id).options) { item.disabled = !available.has(item.value); item.textContent = item.value + (item.disabled ? " (unavailable)" : ""); }
+        if ($(id).selectedOptions[0]?.disabled) $(id).value = id === "#fx-from" ? "THB" : "USD";
+      }
+      syncFxAmount();
       $("#fx-quote-button").disabled = false;
     } catch (e) {
       if (ticket !== generation) return;
@@ -63,7 +77,15 @@ export function createExtensions({ api, notify, money, node, getUser, getAccount
   }
   async function openExchange() {
     $("#fx-wallets").replaceChildren(node("p", "Loading wallets…", "muted"));
-    await Promise.all([loadWallets(), refreshRates()]);
+    await loadWallets();
+    await refreshRates();
+  }
+  function syncFxAmount() {
+    const code = $("#fx-from").value;
+    const scale = currencyDetails.find(c => c.code === code)?.fractionDigits ?? 2;
+    $("#fx-amount").pattern = scale === 0 ? "[0-9]+" : "[0-9]+([.][0-9]{1," + scale + "})?";
+    $("#fx-amount").placeholder = scale === 0 ? "0" : "0.00";
+    $("#fx-precision").textContent = code + (scale === 0 ? " uses whole units only." : " supports up to " + scale + " decimal places.");
   }
   function details(target, values) {
     target.replaceChildren(); values.forEach(([name, value]) => target.append(node("dt", name), node("dd", value)));
@@ -86,7 +108,7 @@ export function createExtensions({ api, notify, money, node, getUser, getAccount
       error("#fx-error");
       try {
         const result = await api("/exchange/quotes/" + quote.id + "/execute", { method: "POST" });
-        clearQuote(); $("#fx-form").reset();
+        clearQuote(); $("#fx-form").reset(); syncFxAmount();
         notify("Exchange completed. Reference: " + result.reference);
         try { await Promise.all([onMoneyChanged(), loadWallets()]); }
         catch { notify("Exchange completed. Refresh the page to reload balances.", true); }
@@ -259,7 +281,7 @@ export function createExtensions({ api, notify, money, node, getUser, getAccount
       const data = await api("/exchange/quotes", { method: "POST", body: { fromCurrency: $("#fx-from").value, toCurrency: $("#fx-to").value, amount: validAmount("#fx-amount") } });
       renderQuote(data);
     });
-    ["#fx-from", "#fx-to", "#fx-amount"].forEach(id => $(id).addEventListener("input", clearQuote));
+    ["#fx-from", "#fx-to", "#fx-amount"].forEach(id => $(id).addEventListener("input", () => { clearQuote(); syncFxAmount(); }));
     $("#fx-confirm").addEventListener("click", confirmExchange);
     $("#fx-refresh").addEventListener("click", () => busy($("#fx-refresh"), async () => {
       try { await Promise.all([refreshRates(), loadWallets()]); } catch (e) { notify(e.message, true); }

@@ -6,13 +6,13 @@ All balances and partner movements remain simulated. Currency rates are real pub
 
 Start `docker compose up --build` from the repository root, then open http://localhost:8080. Register a fictional profile, create an account and deposit simulated THB.
 
-1. **Currency exchange:** refresh rates and inspect the source, publication date and retrieval time. Request a THB/USD/EUR quote, review the amount received, then confirm. Wallet balances and transaction history update. Replaying the same quote returns the original exchange.
+1. **Currency exchange:** refresh rates and inspect the source, publication date and retrieval time. Request a THB/USD/EUR/MMK/SGD/JPY/CNY quote, review the amount received, then confirm. Wallet balances and transaction history update. Replaying the same quote returns the original exchange.
 2. **Demo banks:** consent to connect Harbor Demo Bank or Orchid Demo Bank. Each fictional connection starts with 5,000 simulated THB once. Review and confirm a movement in either direction. Disconnecting and reconnecting preserves its balance.
 3. **Finance tracker:** enter manual income and expenses, choose a month, set category budgets, and inspect the recorded surplus and budget insights. Create a savings goal and allocate a planning amount. These records do not debit or reserve bank funds.
 
 ## Real internet rates
 
-Every rates refresh and new quote requests Frankfurter v2 with ECB data over HTTPS: https://api.frankfurter.dev/v2/rates?base=EUR&quotes=THB,USD&providers=ecb . Documentation: https://frankfurter.dev/ . No user data is sent to this provider.
+Every rates refresh and new quote requests Frankfurter v2 with a pinned CBM snapshot (or optional ECB coverage) over HTTPS: https://api.frankfurter.dev/v2/rates?base=EUR&quotes=THB,USD,MMK,SGD,JPY,CNY&providers=cbm . Documentation: https://frankfurter.dev/ . No user data is sent to this provider.
 
 These are daily reference rates, not executable market prices. A refresh can return the same published rate, especially on weekends or holidays. The interface exposes publication date and retrieval time. Unsupported, malformed, more-than-seven-day-old or unavailable data rejects new quotes with a service-unavailable response. There is no fixed-rate fallback. Existing unexpired quotes retain their agreed rate. Quotes last 120 seconds. Settlement uses the original snapshot ratios and rounds down once to the destination currency's minor unit (two decimals for THB, USD and EUR). No simulated exchange fee is charged.
 
@@ -41,7 +41,7 @@ All routes start with `/api/v1`, require authentication, and use the existing CS
 | Method | Path | Body / purpose |
 | --- | --- | --- |
 | GET | /exchange/rates | Fetch current provider publication |
-| GET | /exchange/wallets | Own THB/USD/EUR balances |
+| GET | /exchange/wallets | Own THB/USD/EUR/MMK/SGD/JPY/CNY balances |
 | POST | /exchange/quotes | fromCurrency, toCurrency, amount |
 | POST | /exchange/quotes/{id}/execute | Execute or replay own quote |
 | GET | /partners/banks | Fictional allowlist |
@@ -66,3 +66,5 @@ The integrated Maven suite passed 56 tests against PostgreSQL with no failures, 
 Run `mvn -f backend/pom.xml clean verify`, then `python3 scripts/smoke_extensions.py` against the running Docker application. The latter requires internet access and creates fictional persisted demo records. Both smoke scripts use only the Python standard library.
 
 No real bank connectors, payments, bank credential storage, automatic transaction categorization, recurring entries, live trading feed or goal withdrawals are implemented. Foreign balances can be exchanged back to THB; ordinary withdrawals and account-to-account transfers remain THB only.
+
+Seven-currency coverage, precision, source policy and verification: [currency guide](CURRENCIES.md).

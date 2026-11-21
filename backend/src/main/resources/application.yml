@@ -24,6 +24,8 @@ server:
 
 
 nilebank:
+  fx:
+    reference-provider: ${FX_REFERENCE_PROVIDER:cbm}
   auth:
     google:
       enabled: ${GOOGLE_LOGIN_ENABLED:false}
