@@ -15,7 +15,7 @@ public class BankUser {
   @Column(nullable = false, unique = true, length = 254)
   private String email;
 
-  @Column(nullable = false, length = 100)
+  @Column(length = 100)
   private String passwordHash;
 
   @Column(nullable = false)

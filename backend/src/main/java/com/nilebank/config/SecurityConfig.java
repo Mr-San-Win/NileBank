@@ -29,6 +29,7 @@ public class SecurityConfig {
     return email ->
         users
             .findByEmail(AuthService.normalize(email))
+            .filter(u -> u.getPasswordHash() != null)
             .map(
                 u ->
                     User.withUsername(u.getId().toString())
