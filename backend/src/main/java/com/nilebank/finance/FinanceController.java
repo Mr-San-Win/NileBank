@@ -46,8 +46,8 @@ public class FinanceController {
   }
 
   @GetMapping("/categories")
-  public FinanceService.Categories categories() {
-    return service.categories();
+  public FinanceService.Categories categories(Principal p) {
+    return service.categories(owner(p));
   }
 
   @PostMapping("/entries")
@@ -62,8 +62,18 @@ public class FinanceController {
       Principal p,
       @RequestParam(required = false) String month,
       @RequestParam(defaultValue = "0") int page,
-      @RequestParam(defaultValue = "20") int size) {
-    return service.entries(owner(p), month, page, size);
+      @RequestParam(defaultValue = "20") int size,
+      @RequestParam(required = false) String direction,
+      @RequestParam(required = false) String category,
+      @RequestParam(defaultValue = "DATE_DESC") String sort) {
+    return service.entries(owner(p), month, page, size, direction, category, sort);
+  }
+
+  @PutMapping("/entries/{id}")
+  public FinanceService.EntryView edit(
+      Principal p, @PathVariable UUID id, @Valid @RequestBody EntryRequest r) {
+    return service.edit(
+        owner(p), id, r.direction(), r.category(), r.amount(), r.description(), r.occurredOn());
   }
 
   @DeleteMapping("/entries/{id}")

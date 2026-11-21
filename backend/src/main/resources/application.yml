@@ -24,6 +24,8 @@ server:
 
 
 nilebank:
+  finance:
+    scheduler-enabled: ${FINANCE_SCHEDULER_ENABLED:true}
   fx:
     reference-provider: ${FX_REFERENCE_PROVIDER:cbm}
   auth:

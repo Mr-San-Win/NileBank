@@ -139,3 +139,22 @@ Authentication abuse returns 429 with Retry-After. Recovery/MFA endpoints do not
 See [account security and limitations](ACCOUNT_SECURITY.md).
 
 Seven-currency coverage, precision, source policy and verification: [currency guide](CURRENCIES.md).
+
+## Personal finance expansion
+
+All paths below are under `/api/v1`; all mutations require session authentication and CSRF.
+
+- `PUT /finance/entries/{id}`: same fields as entry creation; owner-only correction.
+- `GET /finance/entries`: adds optional direction/category and sort=DATE_DESC|DATE_ASC|AMOUNT_DESC|AMOUNT_ASC.
+- `GET /finance/categories`: active income/expense codes plus labels for existing history.
+- `GET/POST /finance/category-management`: list all categories or create `{direction,label}`.
+- `PUT /finance/category-management/{code}`: `{label}`; direction/code remain stable.
+- `DELETE /finance/category-management/{code}`: archive, preserve history, pause active rules.
+- `GET/POST /finance/recurring`: list/create schedules with direction, category, amount,
+  description, frequency=DAILY|WEEKLY|MONTHLY, startDate and optional endDate.
+- `PUT /finance/recurring/{id}`: future direction/category/amount/description/endDate changes.
+- `POST /finance/recurring/{id}/state`: `{action:PAUSE|RESUME|CANCEL}`.
+- `POST /finance/recurring/materialize`: bounded idempotent generation; returns `{created:N}`.
+
+Amounts are decimal strings. A generated entry adds recurringRuleId/scheduledFor metadata.
+No route moves bank funds. See [recurrence and category policies](PERSONAL_FINANCE.md).

@@ -22,7 +22,8 @@ A full-stack Java portfolio project demonstrating secure sessions, PostgreSQL tr
 
 - Pinned official reference rates fetched through Frankfurter on refresh; seven-currency wallets and dated 120-second quotes. CBM covers all seven; optional ECB mode explicitly excludes MMK quotes.
 - Fictional partner-bank connections and atomic, idempotent simulated movements.
-- Manual personal finance entries, category budgets, savings goals and explainable monthly spending insights.
+- Manual income/expense entry editing and filtering, owner-defined categories, monthly budgets, planning goals and explainable spending insights.
+- Daily/weekly/monthly recurring tracker entries with bounded catch-up, pause/resume and duplicate protection; never automatic bank movements.
 
 See [extension guide and API](docs/EXTENSIONS.md) for a test walkthrough, rate freshness, consistency design and limitations.
 
@@ -102,6 +103,8 @@ public deployment or new browser walkthrough was verified by this test run.
 AUTH-002 verification passed **132 tests, 0 failures, 0 errors, 0 skipped** on PostgreSQL 17.11, including account linking, credential revocation and abuse controls. See [account security](docs/ACCOUNT_SECURITY.md) for limits and unavailable recovery/MFA.
 
 FX-002 verification passed **143 tests, 0 failures, 0 errors, 0 skipped**. The actual default provider fetch also returned all seven currencies. See [currency precision and reference-source policy](docs/CURRENCIES.md).
+
+FIN-001 verification (22 November 2026) passed **165 tests, 0 failures, 0 errors, 0 skipped**. See [personal finance and recurrence policies](docs/PERSONAL_FINANCE.md).
 
 For host Java development, use an independently running PostgreSQL instance and set `DB_URL`, `DB_USER`, and `DB_PASSWORD` in the process environment, then run `mvn -f backend/pom.xml spring-boot:run`. Spring Boot does not automatically load the Compose `.env` file. Use a fresh empty database so Flyway can create the schema.
 

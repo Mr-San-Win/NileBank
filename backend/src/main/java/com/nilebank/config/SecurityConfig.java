@@ -131,6 +131,7 @@ public class SecurityConfig {
                         "/extensions.js",
                         "/security.js",
                         "/currency.js",
+                        "/planning.js",
                         "/favicon.ico",
                         "/api/v1/health",
                         "/api/v1/auth/csrf",

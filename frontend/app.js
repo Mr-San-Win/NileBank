@@ -1,3 +1,4 @@
+import { createPlanning } from "./planning.js";
 import { configureCurrencies, formatMoney as money } from "./currency.js";
 import { createSecurity } from "./security.js";
 import { createExtensions } from "./extensions.js";
@@ -16,6 +17,8 @@ let noticeTimer;
 const extensions=createExtensions({api,notify,money,node,getUser:()=>state.user,getAccount:()=>state.account,onMoneyChanged:async()=>{await loadAccount();if(state.view==="overview")await loadHistory(true);}});
 
 const security = createSecurity({ api, notify, node, onSignedOut: (message) => { showAuth(); notify(message); } });
+
+const planning = createPlanning({ api, notify, node, money, getUser: () => state.user });
 
 class ApiError extends Error {
   constructor(message, status) {
@@ -173,6 +176,7 @@ function showAuth(message = "") {
   state.csrf = null;
   extensions.reset();
   security.reset();
+  planning.reset();
   document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
   $("#bank-view").hidden = true;
   $("#auth-view").hidden = false;
@@ -259,6 +263,7 @@ async function navigate(view) {
     exchange: "Currency exchange",
     partners: "Demo banks",
     finance: "Finance tracker",
+    planning: "Categories & recurring",
   }[view];
   if (view === "overview" && state.account) await loadHistory(true);
   if (view === "history") {
@@ -267,6 +272,7 @@ async function navigate(view) {
   }
   if (view === "profile") updateProfile();
   if (view === "security") await security.open();
+  if (view === "planning") await planning.open();
   if (["exchange","partners","finance"].includes(view)) await extensions.open(view);
 }
 function renderHistory(target, transactions) {
@@ -645,4 +651,5 @@ window.addEventListener("pageshow", () => {
 });
 extensions.init();
 security.init();
+planning.init();
 init();

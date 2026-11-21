@@ -23,19 +23,43 @@ public class FinanceService {
           "ENTERTAINMENT",
           "OTHER");
   private final FinanceRepository repository;
+  private final FinanceCategoryService categoryService;
 
-  public FinanceService(FinanceRepository repository) {
+  public FinanceService(FinanceRepository repository, FinanceCategoryService categoryService) {
     this.repository = repository;
+    this.categoryService = categoryService;
   }
 
-  public record Categories(List<String> income, List<String> expense, String notice) {}
+  public record Categories(
+      List<String> income, List<String> expense, String notice, Map<String, String> labels) {}
 
   public Categories categories() {
     return new Categories(
         INCOME,
         EXPENSE,
         "THB tracker records only. Transfers, exchange and bank top-ups are not income or spending."
-            + " Tracker entries and savings allocations do not change bank balances.");
+            + " Tracker entries and savings allocations do not change bank balances.",
+        Map.of());
+  }
+
+  @Transactional(readOnly = true)
+  public Categories categories(UUID owner) {
+    var rows = categoryService.list(owner);
+    return new Categories(
+        rows.stream()
+            .filter(c -> !c.archived() && c.direction().equals("INCOME"))
+            .map(FinanceCategoryService.Category::code)
+            .toList(),
+        rows.stream()
+            .filter(c -> !c.archived() && c.direction().equals("EXPENSE"))
+            .map(FinanceCategoryService.Category::code)
+            .toList(),
+        categories().notice(),
+        rows.stream()
+            .collect(
+                java.util.stream.Collectors.toMap(
+                    FinanceCategoryService.Category::code,
+                    FinanceCategoryService.Category::label)));
   }
 
   public static YearMonth month(String input) {
@@ -58,7 +82,9 @@ public class FinanceService {
       String category,
       String amount,
       String description,
-      LocalDate occurredOn) {}
+      LocalDate occurredOn,
+      UUID recurringRuleId,
+      LocalDate scheduledFor) {}
 
   private EntryView view(FinanceRepository.Entry e) {
     return new EntryView(
@@ -67,7 +93,9 @@ public class FinanceService {
         e.category(),
         e.amount().toPlainString(),
         e.description(),
-        e.occurredOn());
+        e.occurredOn(),
+        e.recurringRuleId(),
+        e.scheduledFor());
   }
 
   @Transactional
@@ -78,12 +106,23 @@ public class FinanceService {
       BigDecimal amount,
       String description,
       LocalDate day) {
+    var valid = validateEntry(owner, direction, category, amount, description, day, false);
+    return view(
+        repository.add(owner, direction, category, valid.amount(), valid.description(), day));
+  }
+
+  private record ValidEntry(BigDecimal amount, String description) {}
+
+  private ValidEntry validateEntry(
+      UUID owner,
+      String direction,
+      String category,
+      BigDecimal amount,
+      String description,
+      LocalDate day,
+      boolean archived) {
     amount = Money.validate(amount);
-    if (category == null
-        || !("INCOME".equals(direction) && INCOME.contains(category)
-            || "EXPENSE".equals(direction) && EXPENSE.contains(category)))
-      throw new ApiException(
-          HttpStatus.BAD_REQUEST, "Choose a category matching income or expense");
+    categoryService.require(owner, category, direction, archived);
     if (day == null
         || day.getYear() < 2000
         || day.isAfter(LocalDate.now(ZoneId.of("Asia/Bangkok"))))
@@ -91,21 +130,87 @@ public class FinanceService {
     description = description == null ? "" : description.strip();
     if (description.length() > 120)
       throw new ApiException(HttpStatus.BAD_REQUEST, "Description is limited to 120 characters");
-    return view(repository.add(owner, direction, category, amount, description, day));
+    return new ValidEntry(amount, description);
+  }
+
+  @Transactional
+  public EntryView edit(
+      UUID owner,
+      UUID id,
+      String direction,
+      String category,
+      BigDecimal amount,
+      String description,
+      LocalDate day) {
+    var entry =
+        repository
+            .ownedEntry(owner, id)
+            .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Tracker entry not found"));
+    var valid =
+        validateEntry(
+            owner,
+            direction,
+            category,
+            amount,
+            description,
+            day,
+            entry.category().equals(category) && entry.direction().equals(direction));
+    repository.update(owner, id, direction, category, valid.amount(), valid.description(), day);
+    return view(
+        new FinanceRepository.Entry(
+            id,
+            direction,
+            category,
+            valid.amount(),
+            valid.description(),
+            day,
+            entry.recurringRuleId(),
+            entry.scheduledFor()));
   }
 
   public record Entries(
       List<EntryView> content, int page, int size, long totalElements, int totalPages) {}
 
-  @Transactional(readOnly = true)
+  @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
   public Entries entries(UUID owner, String month, int page, int size) {
+    return entries(owner, month, page, size, null, null, "DATE_DESC");
+  }
+
+  @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+  public Entries entries(
+      UUID owner,
+      String month,
+      int page,
+      int size,
+      String direction,
+      String category,
+      String sort) {
     if (page < 0 || size < 1 || size > 100)
       throw new ApiException(
           HttpStatus.BAD_REQUEST, "Page must be nonnegative and size between 1 and 100");
+    if (direction != null
+        && !direction.isBlank()
+        && !List.of("INCOME", "EXPENSE").contains(direction))
+      throw new ApiException(HttpStatus.BAD_REQUEST, "Choose income or expense");
+    String order =
+        Map.of(
+                "DATE_DESC",
+                "occurred_on desc,created_at desc,id desc",
+                "DATE_ASC",
+                "occurred_on,created_at,id",
+                "AMOUNT_DESC",
+                "amount desc,occurred_on desc,id",
+                "AMOUNT_ASC",
+                "amount,occurred_on,id")
+            .get(sort == null ? "DATE_DESC" : sort);
+    if (order == null)
+      throw new ApiException(HttpStatus.BAD_REQUEST, "Choose a supported sort order");
     var period = month(month);
-    long total = repository.count(owner, period);
+    long total = repository.count(owner, period, direction, category);
     return new Entries(
-        repository.entries(owner, period, page, size).stream().map(this::view).toList(),
+        repository.entries(owner, period, page, size, direction, category, order).stream()
+            .map(this::view)
+            .toList(),
         page,
         size,
         total,
@@ -120,8 +225,7 @@ public class FinanceService {
 
   @Transactional
   public void budget(UUID owner, String month, String category, BigDecimal amount) {
-    if (!EXPENSE.contains(category))
-      throw new ApiException(HttpStatus.BAD_REQUEST, "Budgets require an expense category");
+    categoryService.require(owner, category, "EXPENSE", false);
     repository.budget(owner, month(month), category, Money.validate(amount));
   }
 
@@ -204,7 +308,17 @@ public class FinanceService {
     repository.budgets(owner, period).forEach(b -> budgets.put(b.category(), b.amount()));
     List<CategoryView> categories = new ArrayList<>();
     List<Insight> insights = new ArrayList<>();
-    for (String category : EXPENSE) {
+    var allCategories = categoryService.list(owner);
+    var labels =
+        allCategories.stream()
+            .collect(
+                java.util.stream.Collectors.toMap(
+                    FinanceCategoryService.Category::code, FinanceCategoryService.Category::label));
+    for (String category :
+        allCategories.stream()
+            .filter(c -> c.direction().equals("EXPENSE"))
+            .map(FinanceCategoryService.Category::code)
+            .toList()) {
       BigDecimal spent = spending.getOrDefault(category, BigDecimal.ZERO),
           budget = budgets.get(category);
       String percent =
@@ -225,7 +339,7 @@ public class FinanceService {
         insights.add(
             new Insight(
                 "warning",
-                label(category) + " is over budget",
+                labels.get(category) + " is over budget",
                 "You recorded "
                     + decimal(spent.subtract(budget))
                     + " THB more than its limit. Review entries and adjust this category"
@@ -235,7 +349,7 @@ public class FinanceService {
         insights.add(
             new Insight(
                 "info",
-                label(category) + " is near its limit",
+                labels.get(category) + " is near its limit",
                 decimal(budget.subtract(spent)) + " THB remains in this category.",
                 "At least 80% of this saved category budget is used."));
     }

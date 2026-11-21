@@ -8,6 +8,8 @@ import org.testcontainers.containers.PostgreSQLContainer;
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@org.springframework.test.context.TestPropertySource(
+    properties = "nilebank.finance.scheduler-enabled=false")
 public abstract class PostgresTest {
   static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17-alpine");
 

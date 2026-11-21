@@ -100,3 +100,13 @@ same UUID-based ownership model, sessions and CSRF protection. See
 configuration and deployment limitations. Matching email addresses never link users.
 
 Seven-currency coverage, precision, source policy and verification: [currency guide](CURRENCIES.md).
+
+## Personal finance expansion (V13)
+
+Owner-specific categories replace hardcoded assignment constraints with composite
+foreign keys while preserving existing codes and records. Profile-insert seeding and
+upgrade backfill provide defaults. Recurring rules use a pure calendar policy and
+transactional cursor/occurrence generation, with unique tombstones preventing duplicate
+or resurrected entries. Scheduler jobs are bounded and use SKIP LOCKED for concurrent
+workers. This module never calls bank balance mutations. See
+[personal finance design](PERSONAL_FINANCE.md).
