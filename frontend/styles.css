@@ -1274,3 +1274,7 @@ h3{font-size:14px;letter-spacing:-.2px}.feature-note{background:#edf3ff;border:1
 .google-signin { display: flex; align-items: center; justify-content: center; text-decoration: none; margin-top: 1rem; min-height: 44px; }
 .google-signin[hidden] { display: none; }
 .google-signin[aria-disabled="true"] { opacity: .7; cursor: progress; }
+
+#security-view .two-column { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; }
+#security-view fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+@media (max-width: 800px) { #security-view .two-column { grid-template-columns: 1fr; } }

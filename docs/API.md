@@ -122,3 +122,18 @@ Success redirects to `/`; failure redirects to `/?authError=google` with no prov
 details or tokens. Refresh `/api/v1/auth/csrf` and `/api/v1/auth/me` after login.
 Existing password endpoints and POST logout retain their contracts and CSRF checks.
 See [authentication design/setup](AUTHENTICATION.md).
+
+## Account security
+
+Authenticated endpoints (POSTs require CSRF):
+
+- `GET /auth/security`: method availability; no provider subject or credentials.
+- `POST /auth/security/google/link`: `{ "currentPassword": "..." }`; returns a fixed
+  local OAuth redirect after fresh password proof. Intent expires after five minutes.
+- `POST /auth/security/google/unlink`: same proof body; returns 204 and signs out.
+- `POST /auth/security/password`: `{ "currentPassword": "...", "newPassword": "..." }`;
+  returns 204 and signs out. Other sessions are revoked on their next request.
+
+The last sign-in method cannot be removed. Google must be enabled to initiate linking.
+Authentication abuse returns 429 with Retry-After. Recovery/MFA endpoints do not exist.
+See [account security and limitations](ACCOUNT_SECURITY.md).

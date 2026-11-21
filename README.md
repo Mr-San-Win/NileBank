@@ -10,6 +10,7 @@ A full-stack Java portfolio project demonstrating secure sessions, PostgreSQL tr
 
 - Register with a normalized unique email; sign in and out using server-side sessions.
 - Optional Google OpenID Connect Sign-In (disabled by default), with server-side token validation and safe internal identity mapping.
+- Manage sign-in methods, explicitly link/unlink Google, and change passwords with session revocation.
 - Create one virtual THB account, initially funded with zero.
 - Deposit simulated money, withdraw within the available balance, and transfer to another NileBank account.
 - Review a transfer before confirmation; replay the same idempotency key without moving funds again.
@@ -91,11 +92,13 @@ The GitHub Actions workflow runs PostgreSQL tests through the backend Maven wrap
 
 Observed on 30 October 2026: Java 21 `mvn -B verify` passed **56 tests, 0 failures, 0 errors, 0 skipped**, and packaged the executable JAR. The Docker build/start and database/application health checks passed. Both `python3 scripts/smoke.py` and `python3 scripts/smoke_extensions.py` passed; the former verifies the complete HTTP banking journey against Docker, including idempotent replay and cross-user ownership rejection. Browser QA verified the actual frontend on desktop and at a 390px mobile breakpoint. These are functional checks, not a performance benchmark or independent security audit.
 
-Latest authentication verification (21 November 2026): `sh mvnw -B clean verify`
+AUTH-001 authentication verification (21 November 2026): `sh mvnw -B clean verify`
 passed **112 tests, 0 failures, 0 errors, 0 skipped** on PostgreSQL 17.11
 Testcontainers. This includes the existing 97-test foundation plus real Spring OIDC
 callback tests against a local signed-token/JWKS provider. No real Google client,
 public deployment or new browser walkthrough was verified by this test run.
+
+AUTH-002 verification passed **132 tests, 0 failures, 0 errors, 0 skipped** on PostgreSQL 17.11, including account linking, credential revocation and abuse controls. See [account security](docs/ACCOUNT_SECURITY.md) for limits and unavailable recovery/MFA.
 
 For host Java development, use an independently running PostgreSQL instance and set `DB_URL`, `DB_USER`, and `DB_PASSWORD` in the process environment, then run `mvn -f backend/pom.xml spring-boot:run`. Spring Boot does not automatically load the Compose `.env` file. Use a fresh empty database so Flyway can create the schema.
 
@@ -190,7 +193,7 @@ Screenshots were captured from the running app using fictional users and persist
 
 ## Limitations and future improvements
 
-One primary THB account with USD/EUR exchange wallets. Ordinary withdrawals and account-to-account transfers use THB. No password reset, email verification, MFA, rate limiting, admin UI, or self-service freeze action. Frozen state is enforced in the backend and integration tests. Sessions live in application memory and expire on restart. The UI keeps a pending transfer key in tab memory: after a reload or uncertain response, inspect history before starting a fresh transfer. Deposits/withdrawals do not have idempotency keys; an ambiguous response must be checked before retrying.
+One primary THB account with USD/EUR exchange wallets. Ordinary withdrawals and account-to-account transfers use THB. No password reset, email verification, MFA, admin UI, or self-service freeze action. Basic per-process authentication rate limiting is implemented; distributed abuse protection still needs a trusted ingress. Frozen state is enforced in the backend and integration tests. Sessions live in application memory and expire on restart. The UI keeps a pending transfer key in tab memory: after a reload or uncertain response, inspect history before starting a fresh transfer. Deposits/withdrawals do not have idempotency keys; an ambiguous response must be checked before retrying.
 
 History contains successful financial operations only. The database owner could alter/disable its trigger; it is not an externally tamper-proof ledger. No independent security audit or performance benchmarks have been performed. No public deployment or real payment integrations exist.
 

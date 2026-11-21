@@ -212,8 +212,12 @@ class GoogleOidcTest extends PostgresTest {
 
   @MockitoBean ClientRegistrationRepository googleRegistrations;
 
+  static final AtomicInteger PEERS = new AtomicInteger();
+  String peer;
+
   @BeforeEach
   void registration() {
+    peer = "192.0.2." + PEERS.incrementAndGet();
     var registration =
         ClientRegistration.withRegistrationId("google")
             .clientId(CLIENT)
@@ -235,13 +239,24 @@ class GoogleOidcTest extends PostgresTest {
   }
 
   Flow start(String subject, String email) throws Exception {
-    var csrfResponse = mvc.perform(get("/api/v1/auth/csrf")).andExpect(status().isOk()).andReturn();
-    var session = (MockHttpSession) csrfResponse.getRequest().getSession();
+    return startInSession(subject, email, new MockHttpSession());
+  }
+
+  Flow startInSession(String subject, String email, MockHttpSession session) throws Exception {
+    var csrfResponse =
+        mvc.perform(get("/api/v1/auth/csrf").session(session))
+            .andExpect(status().isOk())
+            .andReturn();
     String original = session.getId();
     var oldCsrf = JSON.readTree(csrfResponse.getResponse().getContentAsString());
     var result =
         mvc.perform(
                 get("/oauth2/authorization/google")
+                    .with(
+                        request -> {
+                          request.setRemoteAddr(peer);
+                          return request;
+                        })
                     .session(session)
                     .param("next", "https://attacker.example"))
             .andExpect(status().isFound())
@@ -265,6 +280,11 @@ class GoogleOidcTest extends PostgresTest {
   ResultActions callback(Flow flow) throws Exception {
     return mvc.perform(
         get("/login/oauth2/code/google")
+            .with(
+                request -> {
+                  request.setRemoteAddr(peer);
+                  return request;
+                })
             .session(flow.session)
             .param("state", flow.state)
             .param("code", flow.code));
@@ -364,6 +384,11 @@ class GoogleOidcTest extends PostgresTest {
     int before = EXCHANGES.get();
     mvc.perform(
             get("/login/oauth2/code/google")
+                .with(
+                    request -> {
+                      request.setRemoteAddr(peer);
+                      return request;
+                    })
                 .session(flow.session)
                 .param("state", "wrong")
                 .param("code", flow.code))
@@ -439,6 +464,11 @@ class GoogleOidcTest extends PostgresTest {
     var flow = start();
     mvc.perform(
             get("/login/oauth2/code/google")
+                .with(
+                    request -> {
+                      request.setRemoteAddr(peer);
+                      return request;
+                    })
                 .session(flow.session)
                 .param("state", flow.state)
                 .param("error", "access_denied")
@@ -466,6 +496,119 @@ class GoogleOidcTest extends PostgresTest {
         .when(identityService)
         .resolveOrProvision(org.mockito.ArgumentMatchers.any());
     rejected(flow);
+  }
+
+  MockHttpSession passwordSession(AuthService.UserView user) throws Exception {
+    var result =
+        mvc.perform(
+                post("/api/v1/auth/login")
+                    .session(new MockHttpSession())
+                    .with(
+                        org.springframework.security.test.web.servlet.request
+                            .SecurityMockMvcRequestPostProcessors.csrf())
+                    .contentType("application/json")
+                    .content(
+                        JSON.writeValueAsString(
+                            Map.of("email", user.email(), "password", "Example-passphrase-21"))))
+            .andExpect(status().isOk())
+            .andReturn();
+    return (MockHttpSession) result.getRequest().getSession(false);
+  }
+
+  void prepareLink(MockHttpSession session, String proof) throws Exception {
+    mvc.perform(
+            post("/api/v1/auth/security/google/link")
+                .session(session)
+                .with(
+                    org.springframework.security.test.web.servlet.request
+                        .SecurityMockMvcRequestPostProcessors.csrf())
+                .contentType("application/json")
+                .content(JSON.writeValueAsString(Map.of("currentPassword", proof))))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.redirect").value("/oauth2/authorization/google"));
+  }
+
+  @Test
+  void explicitLinkThroughValidatedCallbackKeepsOwnerAndRevokesOtherSession() throws Exception {
+    var owner =
+        auth.register("Link Owner", UUID.randomUUID() + "@example.test", "Example-passphrase-21");
+    var different =
+        auth.register(
+            "Different Profile", UUID.randomUUID() + "@example.test", "Example-passphrase-21");
+    var session = passwordSession(owner);
+    var otherSession = passwordSession(owner);
+    prepareLink(session, "Example-passphrase-21");
+    var flow = startInSession(UUID.randomUUID().toString(), different.email(), session);
+    callback(flow).andExpect(redirectedUrl("/"));
+    assertThat(session.getAttribute(AccountSecurityController.PENDING_LINK)).isNull();
+    mvc.perform(get("/api/v1/auth/me").session(session))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(owner.id().toString()))
+        .andExpect(jsonPath("$.email").value(owner.email()));
+    mvc.perform(get("/api/v1/auth/security").session(session))
+        .andExpect(jsonPath("$.google").value(true));
+    mvc.perform(get("/api/v1/auth/me").session(otherSession)).andExpect(status().isUnauthorized());
+    mvc.perform(
+            post("/api/v1/auth/security/google/unlink")
+                .session(session)
+                .with(
+                    org.springframework.security.test.web.servlet.request
+                        .SecurityMockMvcRequestPostProcessors.csrf())
+                .contentType("application/json")
+                .content("{\"currentPassword\":\"Example-passphrase-21\"}"))
+        .andExpect(status().isNoContent());
+    assertThat(session.isInvalid()).isTrue();
+    assertThat(identities.findByIssuerAndProviderSubject(ISSUER, flow.fixture.subject)).isEmpty();
+  }
+
+  @Test
+  void linkingRequiresAuthenticationCsrfAndFreshPassword() throws Exception {
+    mvc.perform(
+            post("/api/v1/auth/security/google/link")
+                .with(
+                    org.springframework.security.test.web.servlet.request
+                        .SecurityMockMvcRequestPostProcessors.csrf())
+                .contentType("application/json")
+                .content("{\"currentPassword\":\"Example-passphrase-21\"}"))
+        .andExpect(status().isUnauthorized());
+    var owner =
+        auth.register("Link Owner", UUID.randomUUID() + "@example.test", "Example-passphrase-21");
+    var session = passwordSession(owner);
+    mvc.perform(
+            post("/api/v1/auth/security/google/link")
+                .session(session)
+                .contentType("application/json")
+                .content("{\"currentPassword\":\"Example-passphrase-21\"}"))
+        .andExpect(status().isForbidden());
+    mvc.perform(
+            post("/api/v1/auth/security/google/link")
+                .session(session)
+                .with(
+                    org.springframework.security.test.web.servlet.request
+                        .SecurityMockMvcRequestPostProcessors.csrf())
+                .contentType("application/json")
+                .content("{\"currentPassword\":\"wrong\"}"))
+        .andExpect(status().isUnauthorized());
+    assertThat(session.getAttribute(AccountSecurityController.PENDING_LINK)).isNull();
+  }
+
+  @Test
+  void cannotLinkIdentityAlreadyOwnedByAnotherGoogleUser() throws Exception {
+    var existing = start();
+    callback(existing).andExpect(redirectedUrl("/"));
+    var owner =
+        auth.register("Link Owner", UUID.randomUUID() + "@example.test", "Example-passphrase-21");
+    var session = passwordSession(owner);
+    prepareLink(session, "Example-passphrase-21");
+    var attempt = startInSession(existing.fixture.subject, existing.fixture.email, session);
+    callback(attempt).andExpect(redirectedUrl("/?authError=google"));
+    assertThat(
+            identities
+                .findByIssuerAndProviderSubject(ISSUER, existing.fixture.subject)
+                .orElseThrow()
+                .getUser()
+                .getId())
+        .isNotEqualTo(owner.id());
   }
 
   @AfterAll

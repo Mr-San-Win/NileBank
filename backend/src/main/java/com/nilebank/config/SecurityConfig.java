@@ -1,7 +1,7 @@
 package com.nilebank.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nilebank.auth.AuthService;
+import com.nilebank.auth.*;
 import com.nilebank.common.ApiError;
 import com.nilebank.user.UserRepository;
 import java.util.List;
@@ -9,6 +9,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.*;
 import org.springframework.security.authentication.*;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.ObjectPostProcessor;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.userdetails.*;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -17,6 +18,7 @@ import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
 import org.springframework.security.oauth2.client.web.HttpSessionOAuth2AuthorizedClientRepository;
+import org.springframework.security.oauth2.client.web.OAuth2LoginAuthenticationFilter;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.web.*;
 import org.springframework.security.web.authentication.session.*;
@@ -38,10 +40,8 @@ public class SecurityConfig {
             .filter(u -> u.getPasswordHash() != null)
             .map(
                 u ->
-                    User.withUsername(u.getId().toString())
-                        .password(u.getPasswordHash())
-                        .roles("USER")
-                        .build())
+                    new LocalUserPrincipal(
+                        u.getId(), u.getPasswordHash(), u.getCredentialVersion()))
             .orElseThrow(() -> new UsernameNotFoundException("Invalid credentials"));
   }
 
@@ -77,6 +77,8 @@ public class SecurityConfig {
       SecurityContextRepository contexts,
       CsrfTokenRepository csrfTokens,
       ObjectMapper json,
+      UserRepository users,
+      OidcIdentityMapper oidcMapper,
       SessionAuthenticationStrategy loginSessions,
       ObjectProvider<ClientRegistrationRepository> registrations,
       ObjectProvider<OAuth2UserService<OidcUserRequest, OidcUser>> oidcUsers)
@@ -87,12 +89,35 @@ public class SecurityConfig {
               oauth
                   .clientRegistrationRepository(registrations.getObject())
                   .authorizedClientRepository(new HttpSessionOAuth2AuthorizedClientRepository())
+                  .authorizationEndpoint(
+                      endpoint ->
+                          endpoint.authorizationRequestResolver(
+                              new LinkAuthorizationRequestResolver(registrations.getObject())))
                   .userInfoEndpoint(info -> info.oidcUserService(oidcUsers.getObject()))
-                  .successHandler((request, response, authentication) -> response.sendRedirect("/"))
+                  .withObjectPostProcessor(
+                      new ObjectPostProcessor<OAuth2LoginAuthenticationFilter>() {
+                        @Override
+                        public <O extends OAuth2LoginAuthenticationFilter> O postProcess(O filter) {
+                          filter.setAuthenticationResultConverter(oidcMapper);
+                          return filter;
+                        }
+                      })
+                  .successHandler(
+                      (request, response, authentication) -> {
+                        SecurityEvents.record(
+                            SecurityEvents.Event.LOGIN,
+                            java.util.UUID.fromString(authentication.getName()));
+                        response.sendRedirect("/");
+                      })
                   .failureHandler(
-                      (request, response, exception) ->
-                          response.sendRedirect("/?authError=google")));
+                      (request, response, exception) -> {
+                        SecurityEvents.record(SecurityEvents.Event.LOGIN_FAILED, null);
+                        response.sendRedirect("/?authError=google");
+                      }));
     }
+    http.addFilterAfter(
+        new CredentialVersionFilter(users, json), SecurityContextHolderFilter.class);
+    http.addFilterBefore(new AuthenticationRateLimitFilter(json), CsrfFilter.class);
     http.sessionManagement(session -> session.sessionAuthenticationStrategy(loginSessions));
     http.securityContext(c -> c.securityContextRepository(contexts))
         .csrf(c -> c.csrfTokenRepository(csrfTokens))
@@ -104,6 +129,7 @@ public class SecurityConfig {
                         "/styles.css",
                         "/app.js",
                         "/extensions.js",
+                        "/security.js",
                         "/favicon.ico",
                         "/api/v1/health",
                         "/api/v1/auth/csrf",

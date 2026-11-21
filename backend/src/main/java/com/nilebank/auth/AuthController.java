@@ -58,14 +58,21 @@ public class AuthController {
       throw new org.springframework.security.authentication.BadCredentialsException(
           "Invalid credentials");
     }
-    var authentication =
-        manager.authenticate(
-            UsernamePasswordAuthenticationToken.unauthenticated(r.email(), r.password()));
+    org.springframework.security.core.Authentication authentication;
+    try {
+      authentication =
+          manager.authenticate(
+              UsernamePasswordAuthenticationToken.unauthenticated(r.email(), r.password()));
+    } catch (org.springframework.security.core.AuthenticationException failure) {
+      SecurityEvents.record(SecurityEvents.Event.LOGIN_FAILED, null);
+      throw failure;
+    }
     sessions.onAuthentication(authentication, request, response);
     var context = SecurityContextHolder.createEmptyContext();
     context.setAuthentication(authentication);
     SecurityContextHolder.setContext(context);
     contexts.saveContext(context, request, response);
+    SecurityEvents.record(SecurityEvents.Event.LOGIN, UUID.fromString(authentication.getName()));
     return service.me(UUID.fromString(authentication.getName()));
   }
 

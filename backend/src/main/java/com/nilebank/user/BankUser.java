@@ -19,6 +19,9 @@ public class BankUser {
   private String passwordHash;
 
   @Column(nullable = false)
+  private long credentialVersion;
+
+  @Column(nullable = false)
   private Instant createdAt;
 
   protected BankUser() {}
@@ -29,6 +32,19 @@ public class BankUser {
     this.email = email;
     this.passwordHash = passwordHash;
     this.createdAt = Instant.now();
+  }
+
+  public long getCredentialVersion() {
+    return credentialVersion;
+  }
+
+  public void changePassword(String hash) {
+    this.passwordHash = hash;
+    credentialVersion++;
+  }
+
+  public void revokeSessions() {
+    credentialVersion++;
   }
 
   public UUID getId() {

@@ -86,7 +86,7 @@ session ID/CSRF rotation, banking ownership and logout. No real Google credentia
 or network access are needed for these tests. This does not verify a real Google
 Cloud client or a production reverse proxy.
 
-Account linking/unlinking, recovery, MFA and abuse controls remain separate work.
+Explicit linking/unlinking, credential revocation and basic abuse controls are documented in [account security](ACCOUNT_SECURITY.md). Recovery and MFA remain unavailable.
 Database uniqueness errors can include identity metadata in infrastructure logs;
 production logging/redaction must be reviewed before exposing public registration.
 
@@ -96,3 +96,7 @@ and two additional default-off/password-session-rotation regressions. The fake
 provider performs code-verifier checks and serves signed tokens/JWKS; tests cover
 unsigned/forged/expired tokens, issuer, audience, authorized party and absent nonce.
 A database outage also follows the generic OAuth failure path without authentication.
+
+AUTH-002 verification: 132 tests passed with no failures/errors/skips. V11 adds
+credential versions. The OIDC callback result converter now performs local mapping
+and explicit linking after the standard OidcUserService has validated provider data.

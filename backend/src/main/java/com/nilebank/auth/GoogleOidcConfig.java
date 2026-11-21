@@ -44,25 +44,7 @@ public class GoogleOidcConfig {
   }
 
   @Bean
-  OAuth2UserService<OidcUserRequest, OidcUser> applicationOidcUsers(
-      ExternalIdentityService identities) {
-    var delegate = new OidcUserService();
-    return request -> {
-      var validated = delegate.loadUser(request);
-      try {
-        var claims =
-            ValidatedExternalIdentity.google(
-                request.getIdToken().getIssuer().toExternalForm(),
-                request.getIdToken().getSubject(),
-                validated.getEmail(),
-                Boolean.TRUE.equals(validated.getEmailVerified()),
-                validated.getFullName());
-        return new ApplicationOidcUser(identities.resolveOrProvision(claims).id(), validated);
-      } catch (com.nilebank.common.ApiException
-          | org.springframework.dao.DataAccessException rejected) {
-        throw new OAuth2AuthenticationException(
-            new OAuth2Error("external_identity_rejected"), "External sign-in failed");
-      }
-    };
+  OAuth2UserService<OidcUserRequest, OidcUser> applicationOidcUsers() {
+    return new OidcUserService();
   }
 }

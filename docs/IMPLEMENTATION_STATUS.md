@@ -19,7 +19,7 @@ public reverse-proxy behavior still require external setup and verification.
 
 | Milestone | Existing baseline | Remaining work |
 | --- | --- | --- |
-| AUTH-002 | Sessions, CSRF, BCrypt, external identity foundation | Explicit recent-reauthenticated link/unlink; method settings; password changes and session revocation; abuse controls; redacted security events. Recovery requires verified delivery. MFA remains unimplemented. |
+| AUTH-002 | Explicit password-proof linking/unlinking, method settings, password changes, database session revocation, bounded IP limits and redacted security events; 132 tests pass | Recovery lacks verified delivery and remains unavailable. MFA is not implemented. Production ingress abuse controls still require setup. |
 | FX-002 | THB/USD/EUR, fixed rounding, exact snapshots, atomic execution/replay | Seven-currency metadata, wallet/schema changes, currency-specific source precision, UI formatting; research provider coverage including MMK. Do not fabricate unavailable rates. |
 | FIN-001 | Manual THB entries, deletion/month paging, fixed categories, monthly budgets and deterministic insights | Editing, user categories and safe deletion, richer filters/sorts, recurring rules and idempotent occurrence generation. |
 | SAVE-001 | Planning goals and allocations only, separate from banking | Real simulated savings accounts and atomic audited main/savings transfers; ownership, retry keys, concurrency and conservation tests. |
@@ -31,18 +31,11 @@ public reverse-proxy behavior still require external setup and verification.
 
 ## Next safe implementation sequence
 
-1. Start AUTH-002 on the existing development branch without rewriting commits.
-2. Add explicit authentication-method management and recent reauthentication before
-   linking. Bind linking intent to server session and OAuth state; use the verified
-   callback's issuer/subject, never a JSON claims endpoint or email match.
-3. Preserve the initiating internal UUID during linking; reject identities owned by
-   another user, serialize credential changes and prevent removal of the last method.
-4. Add session revocation for password changes, abuse controls and safe event logging.
-   Test takeover attempts, stale intent, replay, concurrent binding and revocation.
-5. Evaluate recovery delivery and MFA independently. No email shortcut or partially
-   enforced MFA is acceptable. Document unavailable external delivery instead.
-6. Run full Maven verification, check JS/Compose, review diff and secrets, update
-   documentation and create a local milestone commit. Continue FX-002 afterward.
+AUTH-002 core is implemented and locally verified with 132 tests. Continue FX-002:
+verify rate sources and MMK coverage, add currency metadata and a new migration,
+preserve exact-ratio settlement and original three-currency regressions, add all-pair
+precision/conservation/concurrency tests, then update the UI and documentation.
+Recovery/MFA remain explicit limitations; no insecure shortcut is enabled.
 
 ## Commands and constraints
 
@@ -59,5 +52,5 @@ Do not treat this checkpoint as completion of the entire approved expansion.
 
 Local build/integration-test ready for implemented features. Real Google setup is
 unverified. Staging and production readiness are not established. The application
-still lacks rate limiting, password recovery, MFA, linked-account management and
+still lacks password recovery, MFA, distributed ingress abuse controls and
 complete privacy/operations controls required by the broader plan.

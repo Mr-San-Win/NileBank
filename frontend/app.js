@@ -1,3 +1,4 @@
+import { createSecurity } from "./security.js";
 import { createExtensions } from "./extensions.js";
 const $ = (selector) => document.querySelector(selector);
 const state = {
@@ -12,6 +13,8 @@ const state = {
 };
 let noticeTimer;
 const extensions=createExtensions({api,notify,money,node,getUser:()=>state.user,getAccount:()=>state.account,onMoneyChanged:async()=>{await loadAccount();if(state.view==="overview")await loadHistory(true);}});
+
+const security = createSecurity({ api, notify, node, onSignedOut: (message) => { showAuth(); notify(message); } });
 
 class ApiError extends Error {
   constructor(message, status) {
@@ -177,6 +180,7 @@ function showAuth(message = "") {
   state.pending = null;
   state.csrf = null;
   extensions.reset();
+  security.reset();
   document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
   $("#bank-view").hidden = true;
   $("#auth-view").hidden = false;
@@ -258,6 +262,7 @@ async function navigate(view) {
     transfer: "Transfer money",
     history: "Transactions",
     profile: "Account details",
+    security: "Security settings",
     exchange: "Currency exchange",
     partners: "Demo banks",
     finance: "Finance tracker",
@@ -268,6 +273,7 @@ async function navigate(view) {
     await loadHistory();
   }
   if (view === "profile") updateProfile();
+  if (view === "security") await security.open();
   if (["exchange","partners","finance"].includes(view)) await extensions.open(view);
 }
 function renderHistory(target, transactions) {
@@ -603,6 +609,7 @@ $("#next-page").addEventListener("click", async () => {
 async function init() {
   authMode("login");
   const params = new URLSearchParams(location.search);
+  const googleFailure = params.get("authError") === "google";
   if (params.has("authError")) {
     if (params.get("authError") === "google")
       notify("Google sign-in could not be completed. Try again or use your existing sign-in method.", true);
@@ -625,6 +632,7 @@ async function init() {
       throw error;
     }
     await showBank();
+    if (googleFailure) notify("Google sign-in or linking could not be completed. Use your existing sign-in method.", true);
   } catch (error) {
     notify(error.message, true);
   }
@@ -643,4 +651,5 @@ window.addEventListener("pageshow", () => {
   link.textContent = "Continue with Google";
 });
 extensions.init();
+security.init();
 init();
