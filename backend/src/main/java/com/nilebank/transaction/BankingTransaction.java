@@ -15,7 +15,9 @@ public class BankingTransaction {
     TRANSFER,
     EXCHANGE,
     BANK_IN,
-    BANK_OUT
+    BANK_OUT,
+    SAVINGS_IN,
+    SAVINGS_OUT
   }
 
   @Id private UUID id;
@@ -46,14 +48,34 @@ public class BankingTransaction {
 
   @Column(length = 100)
   private String idempotencyKey;
-  @Column(nullable=false,length=3) private String currency="THB";
-  @Column(length=3) private String counterCurrency;
-  @Column(precision=19,scale=2) private BigDecimal counterAmount;
-  @Column(length=180) private String description;
-  public String getCurrency(){return currency;}
-  public String getCounterCurrency(){return counterCurrency;}
-  public BigDecimal getCounterAmount(){return counterAmount;}
-  public String getDescription(){return description;}
+
+  @Column(nullable = false, length = 3)
+  private String currency = "THB";
+
+  @Column(length = 3)
+  private String counterCurrency;
+
+  @Column(precision = 19, scale = 2)
+  private BigDecimal counterAmount;
+
+  @Column(length = 180)
+  private String description;
+
+  public String getCurrency() {
+    return currency;
+  }
+
+  public String getCounterCurrency() {
+    return counterCurrency;
+  }
+
+  public BigDecimal getCounterAmount() {
+    return counterAmount;
+  }
+
+  public String getDescription() {
+    return description;
+  }
 
   public void setIdempotencyKey(String key) {
     this.idempotencyKey = key;

@@ -110,3 +110,11 @@ transactional cursor/occurrence generation, with unique tombstones preventing du
 or resurrected entries. Scheduler jobs are bounded and use SKIP LOCKED for concurrent
 workers. This module never calls bank balance mutations. See
 [personal finance design](PERSONAL_FINANCE.md).
+
+## Simulated savings (V14)
+
+Savings balances are child accounts of the existing primary account, preserving its
+one-owner uniqueness. Monetary operations lock parent then child, debit/credit and
+append financial audit plus a parent-scoped retry record in one transaction. Database
+triggers protect both histories. Planning goals stay separate. See
+[savings integrity and APIs](SAVINGS.md).

@@ -133,6 +133,7 @@
           <button class="nav-item" data-view="partners"><span aria-hidden="true">◇</span> Demo banks</button>
           <button class="nav-item" data-view="finance"><span aria-hidden="true">▥</span> Finance tracker</button>
           <button class="nav-item" data-view="planning"><span aria-hidden="true">↻</span> Categories & recurring</button>
+          <button class="nav-item" data-view="savings"><span aria-hidden="true">◈</span> Savings accounts</button>
           <button class="nav-item" data-view="history">
             <span aria-hidden="true">◷</span> Transactions
           </button>
@@ -394,6 +395,26 @@
   <div class="form-layout"><section class="panel form-panel"><h2>Connect a demo bank</h2><form id="partner-link-form"><label for="partner-bank">Available demo bank</label><select id="partner-bank" required></select><label class="check-label" for="partner-consent"><input id="partner-consent" type="checkbox" required> I understand this is a fictional connection using simulated money.</label><div id="partner-link-error" class="form-error" role="alert" hidden></div><button class="primary full-width">Connect demo account ↗</button></form></section>
   <section class="panel form-panel"><h2>Move simulated THB</h2><form id="partner-move-form"><label for="partner-connection">Connected demo account</label><select id="partner-connection" required></select><label for="partner-direction">Direction</label><select id="partner-direction"><option value="IN">Demo bank → NileBank</option><option value="OUT">NileBank → demo bank</option></select><label for="partner-amount">Amount (THB)</label><input id="partner-amount" type="text" inputmode="decimal" required pattern="[0-9]+([.][0-9]{1,2})?" placeholder="0.00"><div id="partner-move-error" class="form-error" role="alert" hidden></div><button class="primary full-width">Review movement ↗</button></form>
   <div id="partner-review" class="review-panel" hidden><h3>Confirm the movement</h3><p id="partner-review-details"></p><button id="partner-confirm" class="primary full-width">Confirm simulated movement</button></div></section></div>
+</section>
+<section id="savings-view" class="view" hidden>
+  <div class="page-heading"><div><div class="section-kicker">SIMULATED SAVINGS · THB</div><h1>Give your savings a place.</h1><p class="muted">Move virtual funds between your main account and dedicated savings accounts.</p></div><button id="savings-refresh" class="secondary" type="button">Refresh balances</button></div>
+  <div class="feature-note"><strong>Actual simulated balances, separate from planning goals.</strong> Creating an account starts at zero. Planning allocations do not fund it. No interest is accrued; no real money is involved. Main account available: <strong id="savings-main-balance">—</strong>.</div>
+  <div id="savings-error" class="form-error" role="alert" hidden></div><div id="savings-accounts" class="connection-grid"></div>
+  <div class="feature-columns goal-heading">
+    <section class="panel form-panel"><h2>Create or edit savings details</h2><form id="savings-account-form">
+      <label for="savings-name">Savings account name</label><input id="savings-name" required maxlength="80" placeholder="Emergency fund, tuition…">
+      <label for="savings-target">Target (THB, optional)</label><input id="savings-target" type="text" inputmode="decimal" pattern="[0-9]+([.][0-9]{1,2})?" placeholder="0.00">
+      <div id="savings-status-field" hidden><label for="savings-status">Account status</label><select id="savings-status"><option value="ACTIVE">Active</option><option value="FROZEN">Paused — block new movements</option></select></div>
+      <p class="field-help">Up to 10 named accounts. A target is a progress marker, not a deposit or a balance limit.</p><button id="savings-account-save" class="primary full-width" type="submit">Create savings account</button><button id="savings-account-cancel" class="secondary full-width" type="button" hidden>Cancel editing</button>
+    </form></section>
+    <section class="panel form-panel"><h2>Move simulated funds</h2><form id="savings-move-form">
+      <label for="savings-move-account">Savings account</label><select id="savings-move-account" required></select>
+      <label for="savings-direction">Direction</label><select id="savings-direction"><option value="IN">Main → savings</option><option value="OUT">Savings → main</option></select>
+      <label for="savings-amount">Amount (THB)</label><input id="savings-amount" type="text" inputmode="decimal" required pattern="[0-9]+([.][0-9]{1,2})?" placeholder="0.00">
+      <p class="field-help">Maximum 1,000,000 per movement. Both balances change together. After an uncertain response, keep the details unchanged to retry or check history first.</p><button class="primary full-width" type="submit">Review movement</button>
+    </form><div id="savings-review" class="review-panel" hidden><h3>Confirm your movement</h3><p id="savings-review-text"></p><button id="savings-confirm" class="primary full-width" type="button">Confirm simulated movement</button></div></section>
+  </div>
+  <section class="panel activity-panel"><h2>Savings movement history</h2><label for="savings-history-account">Account history</label><select id="savings-history-account"></select><div id="savings-history"></div><div class="pagination"><button id="savings-previous" class="secondary" type="button" disabled>← Previous</button><span id="savings-page">No account selected</span><button id="savings-next" class="secondary" type="button" disabled>Next →</button></div></section>
 </section>
 <section id="planning-view" class="view" hidden>
   <div class="page-heading"><div><div class="section-kicker">YOUR PERSONAL FINANCE ROUTINE</div><h1>Categories & recurring entries.</h1><p class="muted">Organize tracker records and automate repeated planning entries, never bank transfers.</p></div><button id="planning-refresh" class="secondary" type="button">Generate due entries & refresh</button></div>

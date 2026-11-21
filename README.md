@@ -15,6 +15,7 @@ A full-stack Java portfolio project demonstrating secure sessions, PostgreSQL tr
 - Deposit simulated money, withdraw within the available balance, and transfer to another NileBank account.
 - Review a transfer before confirmation; replay the same idempotency key without moving funds again.
 - View persisted recent activity, paginated history, and account/profile details.
+- Create named simulated THB savings accounts; move funds atomically with retry keys, targets and immutable history.
 - Responsive desktop/mobile layout, keyboard-accessible forms, visible demo notices, loading and error states.
 - PostgreSQL constraints, Flyway migrations, explicit account row locks, and immutable successful-operation history.
 
@@ -106,6 +107,8 @@ FX-002 verification passed **143 tests, 0 failures, 0 errors, 0 skipped**. The a
 
 FIN-001 verification (22 November 2026) passed **165 tests, 0 failures, 0 errors, 0 skipped**. See [personal finance and recurrence policies](docs/PERSONAL_FINANCE.md).
 
+SAVE-001 verification passed **180 tests, 0 failures, 0 errors, 0 skipped**. See [simulated savings design](docs/SAVINGS.md).
+
 For host Java development, use an independently running PostgreSQL instance and set `DB_URL`, `DB_USER`, and `DB_PASSWORD` in the process environment, then run `mvn -f backend/pom.xml spring-boot:run`. Spring Boot does not automatically load the Compose `.env` file. Use a fresh empty database so Flyway can create the schema.
 
 ## Repository structure
@@ -151,7 +154,8 @@ Feature packages: `auth`, `user`, `account`, `transaction`, `transfer`, `exchang
 - `banking_transactions`: UUID, type/status, positive bounded numeric amount, source/destination FKs, unique reference, timestamp, sender-scoped idempotency key.
 - currency_wallets and exchange_quotes: foreign balances, expiring agreed rates and replay-safe execution with source provenance.
 - partner_connections and partner_movements: fictional bank balances, consent/state and scoped retry keys.
-- finance_entries, finance_budgets, savings_goals: separate owner-scoped THB planning data.
+- finance_entries, finance_budgets, finance_categories, recurring rules/occurrences and savings_goals: separate owner-scoped THB planning data.
+- savings_accounts and savings_movements: actual simulated THB savings balances and immutable retry-safe movements.
 - Flyway history and a small foundation metadata table track schema/application initialization.
 
 Indexes support source/destination history by timestamp. A PostgreSQL trigger rejects updates/deletes to transaction rows. Successful operations are audited; rejected operations do not create financial history.

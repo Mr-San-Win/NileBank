@@ -1,3 +1,4 @@
+import { createSavings } from "./savings.js";
 import { createPlanning } from "./planning.js";
 import { configureCurrencies, formatMoney as money } from "./currency.js";
 import { createSecurity } from "./security.js";
@@ -19,6 +20,8 @@ const extensions=createExtensions({api,notify,money,node,getUser:()=>state.user,
 const security = createSecurity({ api, notify, node, onSignedOut: (message) => { showAuth(); notify(message); } });
 
 const planning = createPlanning({ api, notify, node, money, getUser: () => state.user });
+
+const savings = createSavings({ api, notify, node, money, getUser: () => state.user, getAccount: () => state.account, onMoneyChanged: loadAccount });
 
 class ApiError extends Error {
   constructor(message, status) {
@@ -177,6 +180,7 @@ function showAuth(message = "") {
   extensions.reset();
   security.reset();
   planning.reset();
+  savings.reset();
   document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
   $("#bank-view").hidden = true;
   $("#auth-view").hidden = false;
@@ -240,7 +244,7 @@ async function showBank() {
   await navigate("overview");
 }
 async function navigate(view) {
-  if (["transfer","exchange","partners"].includes(view) && !state.account) {
+  if (["transfer","exchange","partners","savings"].includes(view) && !state.account) {
     notify("Create your virtual account first.", true);
     view = "overview";
   }
@@ -264,6 +268,7 @@ async function navigate(view) {
     partners: "Demo banks",
     finance: "Finance tracker",
     planning: "Categories & recurring",
+    savings: "Savings accounts",
   }[view];
   if (view === "overview" && state.account) await loadHistory(true);
   if (view === "history") {
@@ -273,6 +278,7 @@ async function navigate(view) {
   if (view === "profile") updateProfile();
   if (view === "security") await security.open();
   if (view === "planning") await planning.open();
+  if (view === "savings") await savings.open();
   if (["exchange","partners","finance"].includes(view)) await extensions.open(view);
 }
 function renderHistory(target, transactions) {
@@ -317,6 +323,8 @@ function renderHistory(target, transactions) {
       EXCHANGE: "Currency exchange",
       BANK_IN: "Demo bank top-up",
       BANK_OUT: "Demo bank transfer",
+      SAVINGS_IN: "Moved to savings",
+      SAVINGS_OUT: "Moved from savings",
     };
     title.append(
       node(
@@ -652,4 +660,5 @@ window.addEventListener("pageshow", () => {
 extensions.init();
 security.init();
 planning.init();
+savings.init();
 init();

@@ -158,3 +158,12 @@ All paths below are under `/api/v1`; all mutations require session authenticatio
 
 Amounts are decimal strings. A generated entry adds recurringRuleId/scheduledFor metadata.
 No route moves bank funds. See [recurrence and category policies](PERSONAL_FINANCE.md).
+
+## Simulated savings
+
+See [savings API and integrity policy](SAVINGS.md). `/savings/accounts` lists/creates
+zero-balance accounts. `PUT /savings/accounts/{id}` updates name/target/status.
+`POST /savings/movements` requires Idempotency-Key and `{savingsId,direction:IN|OUT,amount}`.
+Matching retries return original transaction/balances; changed payload conflicts.
+`GET /savings/accounts/{id}/history` supports page/size. All amounts are THB decimal
+strings. No finance planning allocation automatically funds these accounts.
