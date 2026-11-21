@@ -14,7 +14,17 @@ Start `docker compose up --build` from the repository root, then open http://loc
 
 Every rates refresh and new quote requests Frankfurter v2 with ECB data over HTTPS: https://api.frankfurter.dev/v2/rates?base=EUR&quotes=THB,USD&providers=ecb . Documentation: https://frankfurter.dev/ . No user data is sent to this provider.
 
-These are daily reference rates, not executable market prices. A refresh can return the same published rate, especially on weekends or holidays. The interface exposes publication date and retrieval time. Unsupported, malformed, more-than-seven-day-old or unavailable data rejects new quotes with a service-unavailable response. There is no fixed-rate fallback. Existing unexpired quotes retain their agreed rate. Quotes last 120 seconds, and received amounts round down to two decimals. No simulated exchange fee is charged.
+These are daily reference rates, not executable market prices. A refresh can return the same published rate, especially on weekends or holidays. The interface exposes publication date and retrieval time. Unsupported, malformed, more-than-seven-day-old or unavailable data rejects new quotes with a service-unavailable response. There is no fixed-rate fallback. Existing unexpired quotes retain their agreed rate. Quotes last 120 seconds. Settlement uses the original snapshot ratios and rounds down once to the destination currency's minor unit (two decimals for THB, USD and EUR). No simulated exchange fee is charged.
+
+### Quote amounts and approximate display rates
+
+The quote response keeps its existing fields. `amount` and `receivedAmount` are the authoritative persisted terms. The eight-decimal `rate` is an approximate display reference, not an executable settlement formula: multiplying it by `amount` can differ from `receivedAmount`. `notice` explains this distinction. The `/exchange/rates` THB-per-unit values are also display references.
+
+The provider retains the original EUR-base decimal values internally. For source and target units per EUR, settlement computes `amount × targetUnitsPerEUR / sourceUnitsPerEUR`, rounding down only at the final currency scale. Fixed normalized snapshots use their exact source/target weights equivalently. The THB-equivalent limit is checked by exact cross-multiplication, not rounded normalization. Execution never fetches new rates or recalculates a quoted amount.
+
+With a consistent snapshot, each conversion cannot increase reference-valued funds, splitting cannot pay more than an unsplit conversion, and currency cycles cannot create value through rounding. Rounding losses can occur even with zero fees. These guarantees do not assume that different publications or separately agreed snapshots have identical prices.
+
+Existing quotes are not silently repriced. Before releasing corrected settlement, stop all old application instances and drain outstanding unexecuted quotes using the [offline rollout procedure](FX_ROLLOUT.md); already executed quotes must continue replaying their original results.
 
 ## Persistence and consistency
 

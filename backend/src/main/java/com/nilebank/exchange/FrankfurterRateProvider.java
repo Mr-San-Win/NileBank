@@ -81,7 +81,8 @@ public class FrankfurterRateProvider implements ExchangeRateProvider {
               "EUR",
               perEuro.get("THB"),
               "USD",
-              perEuro.get("THB").divide(perEuro.get("USD"), 8, RoundingMode.HALF_EVEN)));
+              perEuro.get("THB").divide(perEuro.get("USD"), 8, RoundingMode.HALF_EVEN)),
+          Map.of("EUR", BigDecimal.ONE, "THB", perEuro.get("THB"), "USD", perEuro.get("USD")));
     } catch (Exception e) {
       throw unavailable();
     }

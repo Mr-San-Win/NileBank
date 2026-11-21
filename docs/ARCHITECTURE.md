@@ -45,7 +45,7 @@ Cookies are HTTP-only and SameSite=Lax. Secure cookies are configurable for loca
 
 ## Money, transactions and locking
 
-Java BigDecimal and PostgreSQL numeric(19,2) represent balances. Amounts must be positive, within the operation limit and have at most two decimals before persistence. Foreign-exchange applied rates use higher precision, and received funds round down to two decimals.
+Java BigDecimal and PostgreSQL numeric(19,2) represent balances. Amounts must be positive, within the operation limit and have at most two decimals before persistence. Foreign-exchange settlement retains the original provider ratios, rounding down only at the destination minor unit. Eight-decimal rates are approximate display values; the persisted source and destination amounts define the quote.
 
 A service transaction groups balances, successful history and retry state. An unchecked business/persistence exception rolls back the whole operation. @Transactional alone does not prevent overspending: every monetary mutation first acquires a pessimistic write lock on its parent bank_accounts row. Ordinary account-to-account transfers lock both account UUIDs in deterministic string order, reducing deadlock risk. Scalar pre-lock account lookups avoid reusing stale managed entities. The version column is an additional safeguard, not the primary concurrency mechanism.
 
@@ -65,8 +65,8 @@ Deposits/withdrawals and manual tracker additions do not have idempotency keys. 
 
 1. Refresh and quote creation request Frankfurter v2 ECB EUR-base THB/USD data over HTTPS. Only currency parameters are sent, not user information.
 2. The provider validates response shape, currencies, positive rates, common publication date and a maximum seven-day age. Timeouts or invalid/unavailable data reject new quotes with HTTP 503; no fixed fallback exists.
-3. The service derives THB/USD/EUR cross-rates, validates the pair/amount and persists a 120-second quote with applied rate, received amount, source, publication date and retrieval time. The network fetch occurs before acquiring the monetary account lock.
-4. Confirmation locks the owning account, checks eligibility, expiry and available funds, debits one wallet, credits the other, appends history and marks execution in one transaction.
+3. The provider keeps the original EUR-base decimal rates for settlement, separately from approximate THB-per-unit display rates. The service calculates the received amount directly from the exact ratio, with one final downward rounding using Java currency metadata, and checks the THB-equivalent limit by cross-multiplication. It persists a 120-second quote with authoritative source/received amounts, approximate eight-decimal display rate, source, publication date and retrieval time. The network fetch occurs before acquiring the monetary account lock.
+4. Confirmation locks the owning account, checks eligibility, expiry and available funds, debits and credits the persisted amounts without recalculating them from the display rate, appends history and marks execution in one transaction.
 5. Repeating an executed quote returns the original result without converting again.
 
 Reference rates are published daily, not on every market tick. A refresh can return unchanged values on the same day or a holiday. Existing valid quotes retain their agreed rate. Only exchange uses foreign wallets; ordinary deposits, withdrawals, transfers and partners use THB.

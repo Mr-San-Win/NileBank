@@ -1,5 +1,5 @@
 """Full extension smoke test against the real local app and real published FX data."""
-from decimal import Decimal, ROUND_DOWN
+from decimal import Decimal
 from datetime import datetime
 from zoneinfo import ZoneInfo
 import uuid
@@ -16,11 +16,17 @@ def main():
     assert first["fetchedAt"] != second["fetchedAt"]
     quote = user.request("POST", "/exchange/quotes", {"fromCurrency": "THB", "toCurrency": "USD", "amount": "350.00"})
     assert quote["provider"] == first["provider"] and quote["rateDate"]
-    expected = (Decimal("350") * Decimal(quote["rate"])).quantize(Decimal("0.01"), rounding=ROUND_DOWN)
-    assert Decimal(quote["receivedAmount"]) == expected
+    # Settlement is authoritative; an eight-decimal display rate cannot reconstruct it exactly.
+    # Validate its rounding envelope here; fixed-snapshot Java tests prove exact settlement.
+    expected = Decimal(quote["receivedAmount"])
+    amount, rate, half_unit = Decimal(quote["amount"]), Decimal(quote["rate"]), Decimal("0.000000005")
+    assert expected > 0 and expected == expected.quantize(Decimal("0.01"))
+    assert expected <= amount * (rate + half_unit)
+    assert expected + Decimal("0.01") > amount * (rate - half_unit)
     executed = user.request("POST", "/exchange/quotes/" + quote["id"] + "/execute")
     repeat = user.request("POST", "/exchange/quotes/" + quote["id"] + "/execute")
     assert executed["transactionId"] == repeat["transactionId"]
+    assert executed["receivedAmount"] == repeat["receivedAmount"] == quote["receivedAmount"]
     wallets = {w["currency"]: w["balance"] for w in user.request("GET", "/exchange/wallets")}
     assert wallets["THB"] == "650.00" and Decimal(wallets["USD"]) == expected
     connection = user.request("POST", "/partners/connections", {"bankCode": "HARBOR", "demoConsent": True})

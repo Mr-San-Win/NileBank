@@ -107,3 +107,8 @@ On 403, fetch a new CSRF token before submitting again. Do not automatically ret
 ## Current extensions
 
 See [currency exchange, fictional banks and finance tracking](EXTENSIONS.md) for the new schema, API, transaction guarantees, demonstration steps and limitations. The base account remains THB; foreign wallets support USD/EUR using real daily reference rates. Tracker entries and savings allocations are planning records separate from bank balances.
+
+
+### Exchange quote precision
+
+`POST /api/v1/exchange/quotes` retains the existing JSON contract. Monetary response values remain decimal strings. `amount` and `receivedAmount` are the binding persisted terms. `rate` remains an eight-decimal string and is an approximate display rate; clients must not reconstruct settlement from it. `notice` explains the distinction. `POST /exchange/quotes/{id}/execute` uses the stored amount and returns the original result on matching replay, without repricing from a provider refresh. The received amount rounds down once at the destination minor unit; THB, USD and EUR all currently use two decimals. No exchange fee is applied.

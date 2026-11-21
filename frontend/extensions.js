@@ -73,10 +73,10 @@ export function createExtensions({ api, notify, money, node, getUser, getAccount
     details($("#fx-details"), [
       ["You exchange", cash(data.amount, data.fromCurrency) + " " + data.fromCurrency],
       ["You receive", cash(data.receivedAmount, data.toCurrency) + " " + data.toCurrency],
-      ["Applied rate", "1 " + data.fromCurrency + " = " + data.rate + " " + data.toCurrency],
+      ["Reference rate (approx.)", "1 " + data.fromCurrency + " = " + data.rate + " " + data.toCurrency],
       ["Source", data.provider], ["Published", data.rateDate], ["Fee", "0.00"],
     ]);
-    $("#fx-expiry").textContent = "Valid until " + new Date(data.expiresAt).toLocaleTimeString() + ". Received amount rounds down to two decimal places.";
+    $("#fx-expiry").textContent = "Valid until " + new Date(data.expiresAt).toLocaleTimeString() + ". Source and received amounts are the agreed terms; the approximate rate is for display only.";
     $("#fx-review").hidden = false; $("#fx-confirm").disabled = false;
     $("#fx-review").scrollIntoView({ block: "nearest" });
   }

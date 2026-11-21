@@ -153,4 +153,80 @@ class ExtensionApiTest extends PostgresTest {
         .andExpect(jsonPath("$.expenses").value("25.50"))
         .andExpect(jsonPath("$.savingsRate").isEmpty());
   }
+
+  @Test
+  void exchangeApiKeepsDisplayRateAndAuthoritativeAmountsSeparate() throws Exception {
+    var o = owner();
+    var account = accounts.create(o);
+    banking.deposit(o, account.id(), new BigDecimal("1000000"));
+    var response =
+        mvc.perform(
+                post("/api/v1/exchange/quotes")
+                    .with(user(o.toString()))
+                    .with(csrf())
+                    .contentType("application/json")
+                    .content(
+                        "{\"fromCurrency\":\"THB\",\"toCurrency\":\"USD\",\"amount\":\"1000000.00\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.amount").value("1000000.00"))
+            .andExpect(jsonPath("$.receivedAmount").value("28571.42"))
+            .andExpect(jsonPath("$.rate").value("0.02857143"))
+            .andExpect(
+                jsonPath("$.notice").value(org.hamcrest.Matchers.containsString("approximate")))
+            .andExpect(
+                jsonPath("$.notice").value(org.hamcrest.Matchers.containsString("authoritative")))
+            .andReturn();
+    String id = json.readTree(response.getResponse().getContentAsString()).get("id").asText();
+    when(provider.fetch()).thenThrow(new IllegalStateException("No repricing during execution"));
+    var executed =
+        mvc.perform(
+                post("/api/v1/exchange/quotes/" + id + "/execute")
+                    .with(user(o.toString()))
+                    .with(csrf()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.receivedAmount").value("28571.42"))
+            .andReturn();
+    String transactionId =
+        json.readTree(executed.getResponse().getContentAsString()).get("transactionId").asText();
+    mvc.perform(
+            post("/api/v1/exchange/quotes/" + id + "/execute")
+                .with(user(o.toString()))
+                .with(csrf()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.transactionId").value(transactionId))
+        .andExpect(jsonPath("$.receivedAmount").value("28571.42"));
+    assertThat(banking.history(o, 0, 10).totalElements()).isEqualTo(2);
+  }
+
+  @Test
+  void invalidProviderDataReturnsControlledUnavailableWithoutFinancialChanges() throws Exception {
+    var o = owner();
+    var account = accounts.create(o);
+    when(provider.fetch())
+        .thenAnswer(
+            invocation ->
+                new ExchangeRateProvider.Snapshot(
+                    "private provider detail",
+                    LocalDate.now(),
+                    Instant.now(),
+                    Map.of("THB", BigDecimal.ONE)));
+    mvc.perform(get("/api/v1/exchange/rates").with(user(o.toString())))
+        .andExpect(status().isServiceUnavailable())
+        .andExpect(
+            content()
+                .string(
+                    org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("private provider detail"))));
+    mvc.perform(
+            post("/api/v1/exchange/quotes")
+                .with(user(o.toString()))
+                .with(csrf())
+                .contentType("application/json")
+                .content("{\"fromCurrency\":\"THB\",\"toCurrency\":\"USD\",\"amount\":\"350\"}"))
+        .andExpect(status().isServiceUnavailable())
+        .andExpect(
+            content()
+                .string(org.hamcrest.Matchers.containsString("Exchange rate data is unavailable")));
+    assertThat(banking.history(o, 0, 10).totalElements()).isZero();
+  }
 }

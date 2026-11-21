@@ -36,12 +36,12 @@ public class ExchangeService {
     var snapshot = provider.fetch();
     return new Rates(
         "REAL_REFERENCE_RATES",
-        "Actual published reference rates; not a live trading feed. Refresh fetches the latest"
-            + " available publication.",
+        "Approximate display rates from published reference data; not a live trading feed."
+            + " Settlement uses the original snapshot precision, not these display values.",
         snapshot.provider(),
         snapshot.rateDate(),
         snapshot.fetchedAt(),
-        List.of("THB", "USD", "EUR").stream()
+        ExchangeRateProvider.SUPPORTED_CURRENCIES.stream()
             .map(c -> new Rate(c, snapshot.thbPerUnit().get(c).toPlainString()))
             .toList());
   }
@@ -51,7 +51,7 @@ public class ExchangeService {
   @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
   public List<Wallet> wallets(UUID owner) {
     UUID account = ledger.ownedId(owner);
-    return List.of("THB", "USD", "EUR").stream()
+    return ExchangeRateProvider.SUPPORTED_CURRENCIES.stream()
         .map(c -> new Wallet(c, ledger.balance(account, c).toPlainString()))
         .toList();
   }
@@ -84,8 +84,9 @@ public class ExchangeService {
         q.transactionId() == null ? "OPEN" : "EXECUTED",
         q.transactionId(),
         q.reference(),
-        "Simulated money using real reference rates · no fee; received amount rounded down to 2"
-            + " decimals.",
+        "Simulated money · no fee. The eight-decimal rate is approximate and for display only;"
+            + " amount and receivedAmount are the authoritative quote terms. The received amount"
+            + " rounds down once to the destination currency's minor unit.",
         q.provider(),
         q.rateDate(),
         q.fetchedAt());
@@ -96,20 +97,28 @@ public class ExchangeService {
     amount = Money.validate(amount);
     if (from == null
         || to == null
-        || !Set.of("THB", "USD", "EUR").contains(from)
-        || !Set.of("THB", "USD", "EUR").contains(to)
+        || !ExchangeRateProvider.SUPPORTED_CURRENCIES.contains(from)
+        || !ExchangeRateProvider.SUPPORTED_CURRENCIES.contains(to)
         || from.equals(to))
       throw new ApiException(HttpStatus.BAD_REQUEST, "Choose two different supported currencies");
     // Fetch before acquiring any account lock; failed networking never touches balances.
     var snapshot = provider.fetch();
-    if (amount.multiply(snapshot.thbPerUnit().get(from)).compareTo(new BigDecimal("1000000")) > 0)
+    var thbConversion = snapshot.conversion(from, "THB");
+    // Cross-multiply to enforce the limit without rounding a normalized THB value.
+    if (amount
+            .multiply(thbConversion.numerator())
+            .compareTo(new BigDecimal("1000000").multiply(thbConversion.denominator()))
+        > 0)
       throw new ApiException(HttpStatus.BAD_REQUEST, "Exchange limit is 1,000,000 THB equivalent");
+    var conversion = snapshot.conversion(from, to);
     BigDecimal rate =
-        snapshot
-            .thbPerUnit()
-            .get(from)
-            .divide(snapshot.thbPerUnit().get(to), 8, RoundingMode.HALF_EVEN);
-    BigDecimal received = amount.multiply(rate).setScale(2, RoundingMode.DOWN);
+        conversion.numerator().divide(conversion.denominator(), 8, RoundingMode.HALF_EVEN);
+    int destinationScale = Currency.getInstance(to).getDefaultFractionDigits();
+    // One final rounding step. The rounded display rate must never determine credited funds.
+    BigDecimal received =
+        amount
+            .multiply(conversion.numerator())
+            .divide(conversion.denominator(), destinationScale, RoundingMode.DOWN);
     if (received.signum() <= 0)
       throw new ApiException(HttpStatus.BAD_REQUEST, "Amount is too small after currency rounding");
     var account = ledger.lockOwned(owner);
