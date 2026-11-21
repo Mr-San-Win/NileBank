@@ -32,4 +32,20 @@ class RateProviderTest {
             "[{\"date\":\"2026-10-29\",\"base\":\"EUR\",\"quote\":\"THB\",\"rate\":-38},{\"date\":\"2026-10-29\",\"base\":\"EUR\",\"quote\":\"USD\",\"rate\":1.25}]"))
       assertThatThrownBy(() -> provider.parse(body, now)).isInstanceOf(ApiException.class);
   }
+
+  @Test
+  void retainsPublishedDecimalRatiosWithoutNormalizingSettlementWeights() {
+    var r =
+        provider.parse(
+            "[{\"date\":\"2026-10-29\",\"base\":\"EUR\",\"quote\":\"THB\",\"rate\":1.234567890123456789},{\"date\":\"2026-10-29\",\"base\":\"EUR\",\"quote\":\"USD\",\"rate\":0.600000000000000001}]",
+            now);
+    assertThat(r.conversion("THB", "USD").numerator()).isEqualByComparingTo("0.600000000000000001");
+    assertThat(r.conversion("THB", "USD").denominator())
+        .isEqualByComparingTo("1.234567890123456789");
+    assertThat(r.conversion("USD", "THB").numerator()).isEqualByComparingTo("1.234567890123456789");
+    assertThat(r.conversion("USD", "THB").denominator())
+        .isEqualByComparingTo("0.600000000000000001");
+    assertThat(r.conversion("EUR", "USD").denominator()).isEqualByComparingTo("1");
+    assertThat(r.thbPerUnit().get("USD").scale()).isEqualTo(8);
+  }
 }
