@@ -224,6 +224,18 @@ class AccountSecurityTest extends PostgresTest {
   }
 
   @Test
+  void revokedSessionCanStillLoadLoginPageAndStaticModules() throws Exception {
+    var user = user();
+    for (String path : new String[] {"/", "/app.js", "/savings.js", "/api/v1/auth/csrf"}) {
+      var session = login(user.email(), PASSWORD);
+      security.changePassword(user.id(), PASSWORD, "Replacement-password-22");
+      mvc.perform(get(path).session(session)).andExpect(status().isOk());
+      assertThat(session.isInvalid()).isTrue();
+      security.changePassword(user.id(), "Replacement-password-22", PASSWORD);
+    }
+  }
+
+  @Test
   void blankOversizedAndSamePasswordsAreRejected() {
     var user = user();
     for (String replacement : Arrays.asList(null, "short", PASSWORD, "ก".repeat(30)))

@@ -316,7 +316,7 @@ export function createExtensions({ api, notify, money, node, getUser, getAccount
     ["#fx-from", "#fx-to", "#fx-amount"].forEach(id => $(id).addEventListener("input", () => { clearQuote(); syncFxAmount(); }));
     $("#fx-confirm").addEventListener("click", confirmExchange);
     $("#fx-refresh").addEventListener("click", () => busy($("#fx-refresh"), async () => {
-      try { await Promise.all([refreshRates(), loadWallets()]); } catch (e) { notify(e.message, true); }
+      try { await loadWallets(); await refreshRates(); } catch (e) { notify(e.message, true); }
     }));
     setInterval(() => {
       if (quote && new Date(quote.expiresAt).getTime() <= Date.now()) {

@@ -24,14 +24,20 @@ public class TransactionController {
 
   @PostMapping("/deposit")
   @ResponseStatus(HttpStatus.CREATED)
-  public TransactionView deposit(Principal p, @Valid @RequestBody Operation r) {
-    return service.deposit(UUID.fromString(p.getName()), r.accountId(), r.amount());
+  public TransactionView deposit(
+      Principal p,
+      @Valid @RequestBody Operation r,
+      @RequestHeader(value = "Idempotency-Key", required = false) String key) {
+    return service.deposit(UUID.fromString(p.getName()), r.accountId(), r.amount(), key);
   }
 
   @PostMapping("/withdraw")
   @ResponseStatus(HttpStatus.CREATED)
-  public TransactionView withdraw(Principal p, @Valid @RequestBody Operation r) {
-    return service.withdraw(UUID.fromString(p.getName()), r.accountId(), r.amount());
+  public TransactionView withdraw(
+      Principal p,
+      @Valid @RequestBody Operation r,
+      @RequestHeader(value = "Idempotency-Key", required = false) String key) {
+    return service.withdraw(UUID.fromString(p.getName()), r.accountId(), r.amount(), key);
   }
 
   @GetMapping

@@ -23,7 +23,7 @@ public reverse-proxy behavior still require external setup and verification.
 | FX-002 | Seven-currency wallets, JPY precision, all 42 directions, exact snapshots, atomic execution/replay and provider attribution; 143 tests pass | CBM default fetch verified for all seven; ECB mode intentionally has no MMK quotes. No public deployment or market-price claim. |
 | FIN-001 | Entry editing/filtering, owned categories and archival, budgets/insights, daily/weekly/monthly schedules, bounded idempotent generation; 165 tests pass | Browser walkthrough pending. Tracker data remains separate from bank balances. |
 | SAVE-001 | Persisted THB savings accounts, targets/status, atomic main/savings movements, retry keys and immutable history; 180 tests pass | Browser walkthrough and broader banking integration review remain. Planning goals stay separate. |
-| BANK-001 | Existing banking/FX/partner regression tests remain passing | Re-review new financial operations as added, including retry behavior and audit coverage. No wholesale rewrite. |
+| BANK-001 | Cash retries, shared public-session revocation handling, existing banking/FX/partner concurrency tests; 186 tests pass | Legacy clients without cash retry keys remain non-idempotent. No double-entry ledger or reconciliation engine. |
 | UI-001 | Existing responsive banking/finance screens plus optional Google control | Security, recurring transactions and real savings screens; coherent navigation and verified browser/mobile flows. |
 | TEST-001 | 112 passing tests at AUTH-001 checkpoint | Extend coverage for each subsequent milestone; preserve baseline; do not substitute mocked authentication for protocol tests. |
 | DOC-001 | Updated README, API, architecture and authentication guide | Document remaining modules and schema changes once implemented; complete setup and operational guides. |
@@ -32,8 +32,7 @@ public reverse-proxy behavior still require external setup and verification.
 ## Next safe implementation sequence
 
 AUTH-002 core, FX-002, FIN-001 and SAVE-001 are locally implemented. The latest full
-suite has 180 passing tests plus seven currency-format assertions. Continue BANK-001:
-review cash-operation retry behavior and mixed cross-module locking; then finish
+suite has 186 passing tests plus seven currency-format assertions. BANK-001 cash retry and session fixes are verified. Continue with
 UI/browser review, operational documentation and production preparation. Isolated
 Playwright tooling is installed under ignored .tools for actual browser verification.
 Recovery and MFA remain explicitly unavailable.
@@ -45,7 +44,7 @@ existing ignored cache via `-Dmaven.repo.local=/home/san_win/NileBank/.tools/m2`
 that is an environment-specific optimization, not a prerequisite for another machine.
 Docker must be running; PostgreSQL integration tests do not skip themselves.
 
-Never edit applied V1-V14 migrations, discard local work, fabricate live rates,
+Never edit applied V1-V15 migrations, discard local work, fabricate live rates,
 create real credentials, push, merge or deploy without the relevant authorization.
 Do not treat this checkpoint as completion of the entire approved expansion.
 

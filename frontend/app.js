@@ -13,6 +13,7 @@ const state = {
   page: 0,
   moneyMode: "deposit",
   pending: null,
+  pendingCash: null,
 };
 let noticeTimer;
 const extensions=createExtensions({api,notify,money,node,getUser:()=>state.user,getAccount:()=>state.account,onMoneyChanged:async()=>{await loadAccount();if(state.view==="overview")await loadHistory(true);}});
@@ -63,7 +64,7 @@ async function api(path, { method = "GET", body, key } = {}) {
     throw new ApiError(
       method === "GET"
         ? "Could not connect. Check your connection and try again."
-        : "The response was lost. Check your activity before repeating a deposit or withdrawal. A transfer can be retried safely with the same details.",
+        : "The response was lost. Keep this form open and retry with unchanged details, or check your activity before starting a new operation.",
       0,
     );
   }
@@ -138,7 +139,8 @@ function amount(input) {
       400,
     );
   }
-  return value;
+  const [whole, fraction = ""] = value.split(".");
+  return whole.replace(/^0+(?=\d)/, "") + "." + fraction.padEnd(2, "0");
 }
 function node(tag, text, className) {
   const element = document.createElement(tag);
@@ -176,7 +178,11 @@ function showAuth(message = "") {
   state.user = null;
   state.account = null;
   state.pending = null;
+  state.pendingCash = null;
   state.csrf = null;
+  ["balance", "account-number", "account-status", "user-name", "avatar", "greeting"].forEach(id => $("#" + id).textContent = "—");
+  $("#profile-details").replaceChildren();
+  $("#account-dashboard").hidden = true;
   extensions.reset();
   security.reset();
   planning.reset();
@@ -420,6 +426,7 @@ function openMoney(mode) {
     return;
   }
   state.moneyMode = mode;
+  state.pendingCash = null;
   const deposit = mode === "deposit";
   $("#money-heading").textContent = deposit
     ? "Add a little possibility."
@@ -527,13 +534,14 @@ $("#money-form").addEventListener("submit", async (event) => {
   setError("#money-error");
   await busy($("#money-submit"), async () => {
     try {
+      const body = { accountId: state.account.id, amount: amount($("#money-amount")) };
+      const fingerprint = JSON.stringify([state.moneyMode, body]);
+      if (state.pendingCash?.fingerprint !== fingerprint)
+        state.pendingCash = { fingerprint, key: crypto.randomUUID() };
       await api("/transactions/" + state.moneyMode, {
-        method: "POST",
-        body: {
-          accountId: state.account.id,
-          amount: amount($("#money-amount")),
-        },
+        method: "POST", body, key: state.pendingCash.key,
       });
+      state.pendingCash = null;
       $("#money-dialog").close();
       await refreshAfterSuccess(
         state.moneyMode === "deposit"

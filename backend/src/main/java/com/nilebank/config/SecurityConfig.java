@@ -122,29 +122,7 @@ public class SecurityConfig {
     http.securityContext(c -> c.securityContextRepository(contexts))
         .csrf(c -> c.csrfTokenRepository(csrfTokens))
         .authorizeHttpRequests(
-            a ->
-                a.requestMatchers(
-                        "/",
-                        "/index.html",
-                        "/styles.css",
-                        "/app.js",
-                        "/extensions.js",
-                        "/security.js",
-                        "/currency.js",
-                        "/planning.js",
-                        "/savings.js",
-                        "/favicon.ico",
-                        "/api/v1/health",
-                        "/api/v1/auth/csrf",
-                        "/api/v1/auth/options",
-                        "/oauth2/authorization/google",
-                        "/login/oauth2/code/google",
-                        "/api/v1/auth/register",
-                        "/api/v1/auth/login",
-                        "/error")
-                    .permitAll()
-                    .anyRequest()
-                    .authenticated())
+            a -> a.requestMatchers(PublicEndpoints.PATHS).permitAll().anyRequest().authenticated())
         .exceptionHandling(
             e ->
                 e.authenticationEntryPoint(

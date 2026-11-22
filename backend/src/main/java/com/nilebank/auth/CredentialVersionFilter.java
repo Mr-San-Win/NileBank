@@ -32,26 +32,15 @@ public final class CredentialVersionFilter extends OncePerRequestFilter {
       throws ServletException, IOException {
     var auth = SecurityContextHolder.getContext().getAuthentication();
     if (auth != null && auth.isAuthenticated() && !(auth instanceof AnonymousAuthenticationToken)) {
+      boolean revoked;
       try {
         var user = users.findById(UUID.fromString(auth.getName()));
         // Legacy sessions and Spring test principals belong to pre-revocation version zero.
         long version =
             auth.getPrincipal() instanceof VersionedPrincipal p ? p.credentialVersion() : 0;
-        if (user.isEmpty() || user.get().getCredentialVersion() != version) {
-          if (request.getSession(false) != null) request.getSession(false).invalidate();
-          SecurityContextHolder.clearContext();
-          response.setStatus(401);
-          response.setContentType("application/json");
-          json.writeValue(response.getOutputStream(), ApiError.of(401, "Please log in again"));
-          return;
-        }
+        revoked = user.isEmpty() || user.get().getCredentialVersion() != version;
       } catch (IllegalArgumentException invalidIdentity) {
-        if (request.getSession(false) != null) request.getSession(false).invalidate();
-        SecurityContextHolder.clearContext();
-        response.setStatus(401);
-        response.setContentType("application/json");
-        json.writeValue(response.getOutputStream(), ApiError.of(401, "Please log in again"));
-        return;
+        revoked = true;
       } catch (org.springframework.dao.DataAccessException unavailable) {
         response.setStatus(503);
         response.setContentType("application/json");
@@ -59,6 +48,16 @@ public final class CredentialVersionFilter extends OncePerRequestFilter {
             response.getOutputStream(),
             ApiError.of(503, "Authentication is temporarily unavailable"));
         return;
+      }
+      if (revoked) {
+        if (request.getSession(false) != null) request.getSession(false).invalidate();
+        SecurityContextHolder.clearContext();
+        if (!com.nilebank.config.PublicEndpoints.contains(request.getRequestURI())) {
+          response.setStatus(401);
+          response.setContentType("application/json");
+          json.writeValue(response.getOutputStream(), ApiError.of(401, "Please log in again"));
+          return;
+        }
       }
     }
     chain.doFilter(request, response);

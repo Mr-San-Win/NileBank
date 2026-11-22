@@ -167,3 +167,10 @@ zero-balance accounts. `PUT /savings/accounts/{id}` updates name/target/status.
 Matching retries return original transaction/balances; changed payload conflicts.
 `GET /savings/accounts/{id}/history` supports page/size. All amounts are THB decimal
 strings. No finance planning allocation automatically funds these accounts.
+
+## Cash operation retries
+
+Deposit and withdrawal accept optional `Idempotency-Key` (8–100 characters).
+The browser supplies it. Same account/operation/key and amount replays the original
+transaction; changed amount returns 409. Missing keys preserve legacy non-idempotent
+behavior. See [banking consistency](BANKING_CONSISTENCY.md).

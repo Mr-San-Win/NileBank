@@ -80,8 +80,7 @@ Java 21 and Docker are required for the full suite. Node.js 20+ is needed for Ja
 cd backend
 sh mvnw -B clean verify
 cd ..
-node --check frontend/app.js
-node --check frontend/extensions.js
+for file in frontend/*.js; do node --check --input-type=module < "$file"; done
 node scripts/check_currency_format.mjs
 python3 scripts/smoke.py
 python3 scripts/smoke_extensions.py
@@ -91,7 +90,7 @@ PowerShell: run `.\mvnw.cmd -B clean verify` inside `backend/`. An installed Mav
 
 Tests include registration, duplicate email, generic login errors, unauthenticated access, ownership, zero accounts, exact monetary validation, deposits/withdrawals, insufficient funds, immutable history, atomic transfers, idempotency replay/conflict, concurrent withdrawals, concurrent duplicate transfers, opposing transfers, mixed operations, CSRF rotation/logout, and a real HTTP session journey.
 
-The GitHub Actions workflow runs PostgreSQL tests through the backend Maven wrapper, checks both frontend JavaScript modules and builds the single application image. Refactor verification results are documented in [the structural refactor guide](docs/REFACTOR.md).
+The GitHub Actions workflow runs PostgreSQL tests through the backend Maven wrapper, checks every frontend JavaScript module and builds the single application image. Refactor verification results are documented in [the structural refactor guide](docs/REFACTOR.md).
 
 Observed on 30 October 2026: Java 21 `mvn -B verify` passed **56 tests, 0 failures, 0 errors, 0 skipped**, and packaged the executable JAR. The Docker build/start and database/application health checks passed. Both `python3 scripts/smoke.py` and `python3 scripts/smoke_extensions.py` passed; the former verifies the complete HTTP banking journey against Docker, including idempotent replay and cross-user ownership rejection. Browser QA verified the actual frontend on desktop and at a 390px mobile breakpoint. These are functional checks, not a performance benchmark or independent security audit.
 
@@ -109,6 +108,8 @@ FIN-001 verification (22 November 2026) passed **165 tests, 0 failures, 0 errors
 
 SAVE-001 verification passed **180 tests, 0 failures, 0 errors, 0 skipped**. See [simulated savings design](docs/SAVINGS.md).
 
+BANK-001 verification (22 November 2026) passed **186 tests, 0 failures, 0 errors, 0 skipped**. See [banking retry and consistency rules](docs/BANKING_CONSISTENCY.md).
+
 For host Java development, use an independently running PostgreSQL instance and set `DB_URL`, `DB_USER`, and `DB_PASSWORD` in the process environment, then run `mvn -f backend/pom.xml spring-boot:run`. Spring Boot does not automatically load the Compose `.env` file. Use a fresh empty database so Flyway can create the schema.
 
 ## Repository structure
@@ -121,7 +122,8 @@ backend/
   src/main/resources/     configuration and Flyway migrations
   src/test/java/          unit, HTTP and PostgreSQL concurrency tests
 frontend/
-  index.html, styles.css, app.js, extensions.js
+  index.html, styles.css, app.js, extensions.js, security.js,
+  currency.js, planning.js, savings.js
 docs/                     architecture, API, setup guides and screenshots
 scripts/                  optional HTTP smoke checks
 .github/workflows/        CI
@@ -144,7 +146,7 @@ flowchart LR
   Flyway["Flyway migrations"] --> Postgres
 ```
 
-Feature packages: `auth`, `user`, `account`, `transaction`, `transfer`, `exchange`, `partner`, `finance`, `config`, and `common`. Controllers handle HTTP; services enforce business rules and transaction boundaries; repositories persist entities; DTOs define external contracts. The application serves its own static frontend, so no CORS configuration or separate frontend server is needed.
+Feature packages: `auth`, `user`, `account`, `transaction`, `transfer`, `exchange`, `partner`, `finance`, `savings`, `config`, and `common`. Controllers handle HTTP; services enforce business rules and transaction boundaries; repositories persist entities; DTOs define external contracts. The application serves its own static frontend, so no CORS configuration or separate frontend server is needed.
 
 ## Database
 
@@ -155,6 +157,7 @@ Feature packages: `auth`, `user`, `account`, `transaction`, `transfer`, `exchang
 - currency_wallets and exchange_quotes: foreign balances, expiring agreed rates and replay-safe execution with source provenance.
 - partner_connections and partner_movements: fictional bank balances, consent/state and scoped retry keys.
 - finance_entries, finance_budgets, finance_categories, recurring rules/occurrences and savings_goals: separate owner-scoped THB planning data.
+- cash_requests: immutable per-account/operation retry records for deposits and withdrawals.
 - savings_accounts and savings_movements: actual simulated THB savings balances and immutable retry-safe movements.
 - Flyway history and a small foundation metadata table track schema/application initialization.
 
@@ -174,7 +177,7 @@ Every monetary change locks its account row with PostgreSQL `SELECT … FOR UPDA
 
 A service transaction debits, credits, inserts history and stores the idempotency key together. Exceptions roll all of them back. The locked source serializes same-sender requests; a unique `(source_id, idempotency_key)` constraint provides a database backstop. Matching retries return the original transaction; changed recipient/amount conflicts. Failed transfers roll back their key, so a corrected retry may reuse it.
 
-Amounts are BigDecimal throughout the backend. JSON monetary responses use decimal strings so JavaScript cannot lose precision while parsing large balances. Requests accept decimal strings and enforce at most two fractional digits, positive values, and a 1,000,000 THB operation limit.
+Amounts are BigDecimal throughout the backend. JSON monetary responses use decimal strings so JavaScript cannot lose precision while parsing large balances. Requests accept decimal strings. THB banking operations enforce at most two fractional digits, positive values and a 1,000,000 THB operation limit. FX applies the selected currency scale (JPY zero, other enabled currencies two).
 
 This is an account-balance simulator with append-only audit history, **not a production double-entry ledger**.
 
@@ -203,7 +206,7 @@ Screenshots were captured from the running app using fictional users and persist
 
 ## Limitations and future improvements
 
-One primary THB account with USD/EUR/MMK/SGD/JPY/CNY exchange wallets. JPY uses whole yen; other supported currencies use two decimals. Ordinary withdrawals and account-to-account transfers use THB. No password reset, email verification, MFA, admin UI, or self-service freeze action. Basic per-process authentication rate limiting is implemented; distributed abuse protection still needs a trusted ingress. Frozen state is enforced in the backend and integration tests. Sessions live in application memory and expire on restart. The UI keeps a pending transfer key in tab memory: after a reload or uncertain response, inspect history before starting a fresh transfer. Deposits/withdrawals do not have idempotency keys; an ambiguous response must be checked before retrying.
+One primary THB account with USD/EUR/MMK/SGD/JPY/CNY exchange wallets. JPY uses whole yen; other supported currencies use two decimals. Ordinary withdrawals and account-to-account transfers use THB. No password reset, email verification, MFA, admin UI, or self-service freeze action. Basic per-process authentication rate limiting is implemented; distributed abuse protection still needs a trusted ingress. Frozen state is enforced in the backend and integration tests. Sessions live in application memory and expire on restart. The UI keeps a pending transfer key in tab memory: after a reload or uncertain response, inspect history before starting a fresh transfer. Deposits and withdrawals now accept scoped retry keys; the browser retains one for the same open form. Reloading or opening a new form creates a new key, so inspect history after an uncertain response before starting again. Legacy API calls without keys remain non-idempotent.
 
 History contains successful financial operations only. The database owner could alter/disable its trigger; it is not an externally tamper-proof ledger. No independent security audit or performance benchmarks have been performed. No public deployment or real payment integrations exist.
 
