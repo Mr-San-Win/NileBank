@@ -23,6 +23,8 @@ public final class PublicEndpoints {
     "/api/v1/auth/register",
     "/api/v1/auth/login",
     "/mfa.js",
+    "/verification.js",
+    "/api/v1/auth/email/confirm",
     "/api/v1/auth/mfa/status",
     "/api/v1/auth/mfa/challenge",
     "/recovery.js",

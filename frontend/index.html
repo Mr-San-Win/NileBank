@@ -110,6 +110,7 @@
             <form id="mfa-challenge-form"><label for="mfa-login-code">Authenticator or recovery code</label><input id="mfa-login-code" autocomplete="one-time-code" maxlength="64" required><button id="mfa-login-submit" type="submit" class="primary full-width">Verify code</button></form>
             <div id="mfa-challenge-error" class="form-error" role="alert" hidden></div><button id="mfa-login-cancel" class="secondary full-width" type="button">Cancel sign-in</button>
           </section>
+          <section id="verification-panel" hidden aria-labelledby="verification-heading"><h3 id="verification-heading">Confirm your profile email</h3><p class="field-help">This confirms the address for the profile that requested this link. It does not sign you in, link identities, reset a password or move money.</p><div id="verification-error" class="form-error" role="alert" hidden></div><button id="verification-confirm" class="primary full-width" type="button">Confirm email</button><button id="verification-cancel" class="secondary full-width" type="button">Back to sign in</button></section>
           <button id="forgot-password" class="text-button" type="button" hidden>Forgot your password?</button>
           <section id="recovery-panel" hidden aria-labelledby="recovery-heading">
             <h3 id="recovery-heading">Recover your demo profile</h3>
@@ -415,6 +416,7 @@
 <button id="mfa-enroll" class="secondary full-width" type="button" disabled>Set up authenticator</button>
 <div id="mfa-setup" class="mfa-setup" hidden><p>Add this setup key to your authenticator app. Do not share it.</p><code id="mfa-secret"></code><p id="mfa-setup-details" class="field-help"></p><button id="mfa-confirm" class="primary full-width" type="button">Confirm enrollment</button></div>
 <button id="mfa-regenerate" class="secondary full-width" type="button" disabled>Replace recovery codes</button><button id="mfa-disable" class="secondary full-width" type="button" disabled>Disable authenticator</button></fieldset></form></section>
+<section class="panel form-panel"><h2>Profile email confirmation</h2><p id="email-verification-status" class="muted">Loading email confirmation status…</p><button id="email-verification-request" class="secondary full-width" type="button" disabled>Send confirmation link</button><p class="field-help">The email goes only to this profile's stored address. Confirmation never links another account or changes simulated funds.</p></section>
 </section>
 <section id="partners-view" class="view" hidden>
   <div class="page-heading"><div><div class="section-kicker">YOUR CONNECTED DEMO WORKSPACE</div><h1>Demo bank connections.</h1><p class="muted">Practice moving THB between NileBank and fictional partner accounts.</p></div><button id="partners-refresh" class="secondary">Refresh ↻</button></div>

@@ -23,6 +23,7 @@ checksum/upgrade problems. PostgreSQL 17 is the integration baseline.
 | V15 | Immutable scoped cash retry records |
 | V16 | Hashed expiring password-reset tokens and credential-version binding |
 | V17 | Encrypted authenticator seeds, replay/attempt state and hashed recovery codes |
+| V18 | Optional profile email-confirmation timestamp and separate hashed tokens |
 
 V10 enforces issuer/subject identity uniqueness and one Google binding per user.
 V13 preserves original category codes and existing finance records, backfills owner

@@ -37,6 +37,7 @@ services:
       DB_URL: jdbc:postgresql://db:5432/${DB_NAME:-nilebank}
       DB_USER: ${DB_USER:?Set a dedicated database role}
       DB_PASSWORD: ${DB_PASSWORD:?Set a strong database password}
+      EMAIL_VERIFICATION_ENABLED: ${EMAIL_VERIFICATION_ENABLED:-false}
       MFA_ENABLED: ${MFA_ENABLED:-false}
       MFA_KEYS_JSON: ${MFA_KEYS_JSON:-}
       MFA_ACTIVE_KEY_ID: ${MFA_ACTIVE_KEY_ID:-}

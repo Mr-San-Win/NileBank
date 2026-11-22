@@ -13,7 +13,7 @@ public class RecoveryMailDelivery {
   public RecoveryMailDelivery(RecoverySettings settings) {
     this.settings = settings;
     sender = new JavaMailSenderImpl();
-    if (!settings.enabled) return;
+    if (!settings.enabled && !settings.verificationEnabled) return;
     sender.setHost(settings.host);
     sender.setPort(settings.port);
     if (!settings.username.isBlank()) {
@@ -45,6 +45,23 @@ public class RecoveryMailDelivery {
             + "\n\n"
             + "If you did not request this, ignore this email. No bank funds or account details are"
             + " included.");
+    sender.send(message);
+  }
+
+  public void verifyEmail(String address, String token) {
+    SimpleMailMessage message = new SimpleMailMessage();
+    message.setFrom(settings.from);
+    message.setTo(address);
+    message.setSubject("Confirm your NileBank profile email");
+    message.setText(
+        "Confirm this email for your NileBank simulator profile. The link expires in 24 hours and"
+            + " works once.\n\n"
+            + settings.baseUrl
+            + "/#verify="
+            + token
+            + "\n\n"
+            + "This does not sign you in, link a Google identity, reset a password or transfer"
+            + " money. Ignore this if you did not request it.");
     sender.send(message);
   }
 }

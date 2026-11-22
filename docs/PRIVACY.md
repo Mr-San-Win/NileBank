@@ -39,3 +39,7 @@ seeds, hashed single-use recovery codes and factor attempt/replay metadata. Raw 
 links are delivered only by email; setup seeds/codes are shown only during explicit
 setup/replacement. Preserve encryption-key access controls separately from database
 backups. Factor removal deletes authentication metadata, not financial history.
+
+Optional profile confirmation stores a confirmation timestamp, hashed email-purpose
+tokens, email snapshot and delivery/expiry/consumption metadata. It does not create
+a new sign-in method or automatically bind an external identity.

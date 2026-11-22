@@ -153,3 +153,7 @@ MFA_PENDING authority; every protected application API requires USER. After veri
 TOTP or a single-use recovery code, the session strategy rotates ID/CSRF and restores
 the original validated UUID authentication. Counters and backup-code consumption are
 serialized by user-row locks. See [MFA](MFA.md) for key lifecycle and limitations.
+
+V18 adds an optional email-confirmation timestamp and separate hashed token records.
+Confirmation binds to owner/email/version, consumes once under the user lock, and
+creates no login or external-identity binding. See [email confirmation](EMAIL_VERIFICATION.md).

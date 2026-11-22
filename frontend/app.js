@@ -1,3 +1,4 @@
+import { createVerification } from "./verification.js";
 import { createMfa } from "./mfa.js";
 import { createRecovery } from "./recovery.js";
 import { createSavings } from "./savings.js";
@@ -31,6 +32,10 @@ const recovery = createRecovery({ api, notify, onReset: () => showAuth(), onOpen
 const mfa = createMfa({ api, notify, node, getUser: () => state.user,
   onSignedOut: message => { showAuth(); notify(message); },
   onAuthenticated: async user => { state.user = user; await refreshCsrf(); await showBank(); },
+});
+
+const verification = createVerification({ api, notify, getUser: () => state.user,
+  onOpen: () => showAuth(), onComplete: () => showAuth(),
 });
 
 class ApiError extends Error {
@@ -197,6 +202,7 @@ function showAuth(message = "") {
   planning.reset();
   savings.reset();
   mfa.reset();
+  verification.reset();
   document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
   $("#bank-view").hidden = true;
   $("#auth-view").hidden = false;
@@ -243,6 +249,7 @@ async function loadAccount() {
 }
 async function showBank() {
   recovery.close();
+  verification.close();
   clearTimeout(noticeTimer);
   $("#notice").hidden = true;
   $("#auth-view").hidden = true;
@@ -293,7 +300,7 @@ async function navigate(view) {
     await loadHistory();
   }
   if (view === "profile") updateProfile();
-  if (view === "security") { await security.open(); await mfa.open(); }
+  if (view === "security") { await security.open(); await mfa.open(); await verification.open(); }
   if (view === "planning") await planning.open();
   if (view === "savings") await savings.open();
   if (["exchange","partners","finance"].includes(view)) await extensions.open(view);
@@ -655,6 +662,7 @@ async function init() {
   try {
     await refreshCsrf();
     if (recovery.hasResetLink()) { recovery.openReset(); return; }
+    if (verification.hasLink()) { verification.show(); return; }
     const factor = await api("/auth/mfa/status");
     if (factor.required) { mfa.challenge(); return; }
     try {

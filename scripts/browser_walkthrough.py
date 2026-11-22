@@ -35,6 +35,7 @@ try:
     env.update(RECOVERY_ENABLED='true', RECOVERY_BASE_URL=f'http://127.0.0.1:{appport}', RECOVERY_FROM='qa-recovery@example.test', RECOVERY_SMTP_HOST='127.0.0.1', RECOVERY_SMTP_PORT=str(sink.port), RECOVERY_SMTP_STARTTLS='false')
     import base64
     env.update(MFA_ENABLED='true', MFA_ACTIVE_KEY_ID='qa', MFA_KEYS_JSON=json.dumps({'qa': base64.b64encode(secrets.token_bytes(32)).decode('ascii')}))
+    env['EMAIL_VERIFICATION_ENABLED'] = 'true'
     app = subprocess.Popen(['java', '-jar', str(p / 'backend/target/nilebank-0.1.0.jar')], env=env, stdout=log, stderr=subprocess.STDOUT)
     base = f'http://127.0.0.1:{appport}'
     for _ in range(90):
@@ -276,6 +277,36 @@ try:
         expect(page.locator('#auth-form')).to_be_visible()
         assert not errors, errors
         print('PASS browser MFA enrollment, OTP replay rejection, pending API denial, TOTP login, code replacement/recovery login and secure disable', flush=True)
+        page.locator('#email').fill(email)
+        page.locator('#password').fill(replacement)
+        page.locator('#auth-submit').click()
+        expect(page.locator('#bank-view')).to_be_visible()
+        nav('security')
+        page.locator('#email-verification-request').click()
+        for _ in range(150):
+            if any((email in message and '#verify=' in message for message in sink.messages)):
+                break
+            page.wait_for_timeout(100)
+        message = next((message for message in sink.messages if email in message and '#verify=' in message))
+        verification_token = re.search('#verify=([A-Za-z0-9_-]{43})', message).group(1)
+        page.goto(base + '/#verify=' + verification_token)
+        expect(page.locator('#verification-panel')).to_be_visible()
+        assert '#verify=' not in page.url
+        page.locator('#verification-confirm').click()
+        expect(page.locator('#verification-panel')).not_to_be_visible()
+        expect(page.locator('#auth-form')).to_be_visible()
+        assert page.request.get(base + '/api/v1/auth/me').status == 401
+        page.locator('#email').fill(email)
+        page.locator('#password').fill(replacement)
+        page.locator('#auth-submit').click()
+        expect(page.locator('#bank-view')).to_be_visible()
+        nav('security')
+        expect(page.locator('#email-verification-status')).to_contain_text('Email confirmed')
+        expect(page.locator('#email-verification-request')).to_be_disabled()
+        page.locator('#logout').click()
+        expect(page.locator('#auth-view')).to_be_visible()
+        assert not errors, errors
+        print('PASS browser email request, same-tab fragment confirmation, no automatic login and verified profile status', flush=True)
         browser.close()
 finally:
     if app is not None:

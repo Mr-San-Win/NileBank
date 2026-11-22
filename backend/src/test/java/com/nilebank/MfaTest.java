@@ -127,6 +127,10 @@ class MfaTest extends PostgresTest {
     mvc.perform(get("/api/v1/auth/mfa/status").session(session))
         .andExpect(jsonPath("$.required").value(true));
     mvc.perform(get("/api/v1/auth/me").session(session)).andExpect(status().isForbidden());
+    mvc.perform(get("/api/v1/auth/security/email").session(session))
+        .andExpect(status().isForbidden());
+    mvc.perform(post("/api/v1/auth/security/email/request").session(session).with(csrf()))
+        .andExpect(status().isForbidden());
     mvc.perform(get("/api/v1/accounts/me").session(session)).andExpect(status().isForbidden());
     mvc.perform(
             post("/api/v1/transactions/deposit")

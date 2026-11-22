@@ -4,12 +4,12 @@
 
 Branch: `feature/nilebank-completion`. Work is local only: no push, merge or public
 deployment is authorized. The original FX-001 implementation and all applied
-V1–V9 migrations were preserved. New migrations are V10–V17.
+V1–V9 migrations were preserved. New migrations are V10–V18.
 
 | Milestone | Status | Verified implementation / remaining limits |
 | --- | --- | --- |
 | AUTH-001 | Implemented | Optional default-off Google OIDC, Spring-managed code flow, PKCE/state/nonce/token validation, UUID identity mapping, collision rejection and concurrent provisioning. Real Google credentials/consent remain external and unverified. |
-| AUTH-002 | Implemented with documented limits | Explicit password-proof linking/unlinking, last-method protection, method settings, password change, database credential-version revocation, redacted security events and bounded per-process IP limits. Default-off SMTP recovery and encrypted TOTP MFA are implemented. Both login paths enforce pending-factor authorization. Real SMTP/Google delivery/configuration remains external; email verification and Google-only MFA enrollment are not implemented. |
+| AUTH-002 | Implemented with documented limits | Explicit password-proof linking/unlinking, last-method protection, method settings, password change, database credential-version revocation, redacted security events and bounded per-process IP limits. Default-off SMTP recovery and encrypted TOTP MFA are implemented. Both login paths enforce pending-factor authorization. Real SMTP/Google delivery/configuration remains external; profile email confirmation is implemented; Google-only MFA enrollment is the remaining local security gap. |
 | FX-002 | Implemented | Seven wallets, all 42 directions under a complete snapshot, JPY precision, exact settlement, persisted quotes/replay, pinned CBM reference source. ECB intentionally excludes MMK. Rates are delayed official references, not executable market prices. |
 | FIN-001 | Implemented | Owned categories, archival, entry editing/filtering/sorting, monthly budgets/summaries/comparisons, recurring daily/weekly/monthly entries with idempotent bounded generation and documented date policies. Tracker entries never debit simulated funds. |
 | SAVE-001 | Implemented | Up to ten named THB savings accounts, targets/status, atomic IN/OUT, parent-first locking, retry keys and immutable history. No interest; planning goal allocations remain separate. |
@@ -28,6 +28,8 @@ V1–V9 migrations were preserved. New migrations are V10–V17.
 - Recovery checkpoint: **215 tests passed, zero failures/errors/skips**, including real SMTP transport, TLS failure, token concurrency and session revocation.
 - MFA checkpoint: **239 tests passed, zero failures/errors/skips**, including RFC vectors, encryption/key rotation, concurrent OTP/code consumption, password-recovery bypass prevention and a real signed Google callback requiring MFA.
 - Final Chromium MFA walkthrough passed enrollment, OTP replay rejection, pending API denial, TOTP login, recovery-code replacement/login and secure factor removal.
+- Email-confirmation checkpoint: **250 tests passed, zero failures/errors/skips**; separate token purposes, delivered ownership proof, concurrency, CSRF and default-off compatibility.
+- Chromium email confirmation passed: owned request, same-tab fragment removal, no automatic login, and confirmed profile status after normal sign-in.
 - Every frontend JS module passed syntax checks; seven exact currency-format assertions passed.
 - Isolated Chromium: registration/login, account creation, deposit/withdrawal,
   reviewed internal transfer, savings IN/OUT, category/recurrence/budget/expense,
@@ -49,8 +51,9 @@ Recovery now uses generic asynchronous requests, hashed single-use tokens, real 
 transport and session revocation; production delivery requires external setup. It
 never creates credentials for a Google-only account or links identities by email. TOTP MFA now has encrypted seeds, pending-only authentication, replay/attempt controls
 and hashed recovery codes. Enrollment requires a local password and operator-managed
-keys. Google-only enrollment, assisted factor recovery and email verification remain
-unimplemented; real provider/hosting setup is external. Google-only users cannot invent a local
+keys. Google-only enrollment, assisted factor recovery remain
+unimplemented; profile email confirmation is now available without changing existing
+login permissions. Real provider/hosting setup is external. Google-only users cannot invent a local
 password or unlink their final method. Password proof is currently required to
 initiate explicit linking.
 

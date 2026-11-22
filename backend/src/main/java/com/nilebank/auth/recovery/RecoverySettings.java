@@ -7,12 +7,15 @@ import org.springframework.stereotype.Component;
 @Component
 public class RecoverySettings {
   public final boolean enabled;
+  public final boolean verificationEnabled;
   public final String baseUrl, from, host, username, password;
   public final int port;
   public final boolean tls;
 
   public RecoverySettings(Environment env) {
     enabled = Boolean.parseBoolean(env.getProperty("nilebank.auth.recovery.enabled", "false"));
+    verificationEnabled =
+        env.getProperty("nilebank.auth.verification.enabled", Boolean.class, false);
     baseUrl =
         env.getProperty("nilebank.auth.recovery.base-url", "http://localhost:8080")
             .replaceAll("/$", "");
@@ -22,7 +25,7 @@ public class RecoverySettings {
     username = env.getProperty("nilebank.auth.recovery.smtp-user", "");
     password = env.getProperty("nilebank.auth.recovery.smtp-password", "");
     tls = env.getProperty("nilebank.auth.recovery.smtp-starttls", Boolean.class, true);
-    if (!enabled) return;
+    if (!enabled && !verificationEnabled) return;
     boolean prod = java.util.Arrays.asList(env.getActiveProfiles()).contains("prod");
     URI uri;
     try {
@@ -57,6 +60,6 @@ public class RecoverySettings {
   }
 
   private static IllegalStateException invalid() {
-    return new IllegalStateException("Password recovery configuration is invalid");
+    return new IllegalStateException("Email delivery configuration is invalid");
   }
 }

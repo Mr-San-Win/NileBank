@@ -153,6 +153,8 @@ class HttpJourneyTest extends PostgresTest {
     assertThat(browser.request("GET", "/recovery.js", null, null, false).statusCode())
         .isEqualTo(200);
     assertThat(browser.request("GET", "/mfa.js", null, null, false).statusCode()).isEqualTo(200);
+    assertThat(browser.request("GET", "/verification.js", null, null, false).statusCode())
+        .isEqualTo(200);
     var csrf = browser.request("GET", "/api/v1/auth/csrf", null, null, false);
     assertThat(csrf.headers().firstValue("Set-Cookie").orElse(""))
         .contains("HttpOnly", "SameSite=Lax");

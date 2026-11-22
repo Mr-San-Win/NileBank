@@ -82,4 +82,19 @@ class RecoverySettingsTest {
                     env.withProperty("nilebank.auth.recovery.smtp-starttls", "false")))
         .isInstanceOf(IllegalStateException.class);
   }
+
+  @Test
+  void verificationOnlyStillRequiresSafeSmtpConfiguration() {
+    var env =
+        valid()
+            .withProperty("nilebank.auth.recovery.enabled", "false")
+            .withProperty("nilebank.auth.verification.enabled", "true");
+    assertThatCode(() -> new com.nilebank.auth.recovery.RecoverySettings(env))
+        .doesNotThrowAnyException();
+    assertThatThrownBy(
+            () ->
+                new com.nilebank.auth.recovery.RecoverySettings(
+                    env.withProperty("nilebank.auth.recovery.smtp-host", "")))
+        .isInstanceOf(IllegalStateException.class);
+  }
 }

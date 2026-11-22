@@ -73,3 +73,7 @@ Passing tests do not establish independent security assurance, performance capac
 real Google consent/client configuration, or production readiness. Remote CI results
 cannot include unpublished local commits. See implementation status for actual local
 results and the deployment runbook for environment verification still required.
+
+The isolated SMTP/Chromium walkthrough also verifies profile confirmation: an owned
+request, same-tab fragment removal, explicit confirmation, no automatic login and
+the verified state after signing in. All messages remain in the loopback QA sink.

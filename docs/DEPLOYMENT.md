@@ -145,7 +145,7 @@ approve retention; review database logs separately for PII.
 ## Privacy and remaining release gates
 
 Read [privacy/retention policy](PRIVACY.md). Optional password recovery is default-off and requires verified real SMTP/inbox
-delivery before advertising it. Email verification remains unavailable. TOTP MFA is optional and requires the key
+delivery before advertising it. Optional profile email confirmation is implemented; mandatory public-registration enforcement requires a deliberate rollout policy. TOTP MFA is optional and requires the key
 management and rollout checks in the MFA runbook. Public users need clear account recovery
 limitations, support and a deletion policy. Real Google consent, trusted TLS ingress,
 abuse controls, encrypted off-host backups, operational monitoring and privacy
@@ -169,3 +169,6 @@ Disabling new enrollment does not bypass existing factors. Missing keys fail clo
 for enrolled sign-ins. Rehearse key/database restoration together and monitor clock
 synchronization. Google-only enrollment and assisted lost-factor recovery are not
 implemented. No real production keys were created by this workstream.
+
+See [email confirmation](EMAIL_VERIFICATION.md) before enabling EMAIL_VERIFICATION_ENABLED.
+Existing accounts are not automatically blocked for lacking confirmation.

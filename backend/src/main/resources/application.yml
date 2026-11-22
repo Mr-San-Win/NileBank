@@ -29,6 +29,8 @@ nilebank:
   fx:
     reference-provider: ${FX_REFERENCE_PROVIDER:cbm}
   auth:
+    verification:
+      enabled: ${EMAIL_VERIFICATION_ENABLED:false}
     mfa:
       enabled: ${MFA_ENABLED:false}
       keys-json: ${MFA_KEYS_JSON:}

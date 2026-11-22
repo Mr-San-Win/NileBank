@@ -21,6 +21,8 @@ public class BankUser {
   @Column(nullable = false)
   private long credentialVersion;
 
+  private Instant emailVerifiedAt;
+
   @Column(nullable = false)
   private Instant createdAt;
 
@@ -32,6 +34,14 @@ public class BankUser {
     this.email = email;
     this.passwordHash = passwordHash;
     this.createdAt = Instant.now();
+  }
+
+  public Instant getEmailVerifiedAt() {
+    return emailVerifiedAt;
+  }
+
+  public void verifyEmail() {
+    if (emailVerifiedAt == null) emailVerifiedAt = Instant.now();
   }
 
   public long getCredentialVersion() {

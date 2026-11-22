@@ -198,3 +198,11 @@ Authenticated full-user management endpoints are documented in [MFA](MFA.md):
 `/recovery-codes`. Management takes `currentPassword` and, when needed, `code`. Setup
 seeds and new recovery codes are one-time sensitive responses; never log or persist
 them in browser storage. Factor changes sign out sessions.
+
+## Optional profile email confirmation
+
+Full-user sessions can GET `/auth/security/email` and POST
+`/auth/security/email/request` (CSRF, no recipient body). Public POST
+`/auth/email/confirm` accepts `{ "token": "..." }` with CSRF and returns 204 or
+controlled 400 for invalid/expired/replayed links. Confirmation creates no login,
+changes no credentials and grants no bank access. See [email confirmation](EMAIL_VERIFICATION.md).
