@@ -8,3 +8,13 @@ target/
 
 __pycache__/
 *.pyc
+
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+backups/
+*.dump
+*.sql.gz

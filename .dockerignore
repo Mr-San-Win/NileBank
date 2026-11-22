@@ -5,3 +5,13 @@ target
 
 **/target
 **/__pycache__
+
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+backups/
+*.dump
+*.sql.gz

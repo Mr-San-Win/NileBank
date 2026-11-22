@@ -1,0 +1,61 @@
+# Separate single-host template. Requires an operator-managed HTTPS reverse proxy.
+# Never use this as proof that a public deployment has been verified.
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-nilebank}
+      POSTGRES_USER: ${DB_ADMIN_USER:-nilebank_bootstrap}
+      POSTGRES_PASSWORD: ${DB_ADMIN_PASSWORD:?Set a separate bootstrap password}
+      DB_USER: ${DB_USER:?Set a dedicated database role}
+      DB_PASSWORD: ${DB_PASSWORD:?Set a strong database password}
+    volumes:
+      - production_postgres:/var/lib/postgresql/data
+      - ./infra/postgres/init-app-role.sh:/docker-entrypoint-initdb.d/10-app-role.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    mem_limit: 512m
+    cpus: 1.0
+    security_opt: ["no-new-privileges:true"]
+    logging:
+      driver: local
+      options: {max-size: "10m", max-file: "3"}
+  app:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    ports: ["127.0.0.1:8080:8080"]
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:?Set canonical HTTPS origin}
+      TRUSTED_PROXY_REGEX: ${TRUSTED_PROXY_REGEX:?Set exact trusted proxy peer addresses}
+      DB_URL: jdbc:postgresql://db:5432/${DB_NAME:-nilebank}
+      DB_USER: ${DB_USER:?Set a dedicated database role}
+      DB_PASSWORD: ${DB_PASSWORD:?Set a strong database password}
+      GOOGLE_LOGIN_ENABLED: ${GOOGLE_LOGIN_ENABLED:-false}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-}
+      FX_REFERENCE_PROVIDER: ${FX_REFERENCE_PROVIDER:-cbm}
+      FINANCE_SCHEDULER_ENABLED: ${FINANCE_SCHEDULER_ENABLED:-true}
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=65 -XX:+ExitOnOutOfMemoryError
+    depends_on:
+      db: {condition: service_healthy}
+    read_only: true
+    tmpfs: ["/tmp:size=64m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 768m
+    cpus: 1.0
+    pids_limit: 128
+    stop_grace_period: 30s
+    logging:
+      driver: local
+      options: {max-size: "10m", max-file: "3"}
+volumes:
+  production_postgres:

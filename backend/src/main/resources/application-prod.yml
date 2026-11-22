@@ -1,0 +1,24 @@
+spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+  datasource:
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 5000
+server:
+  shutdown: graceful
+  forward-headers-strategy: native
+  tomcat:
+    redirect-context-root: false
+    remoteip:
+      internal-proxies: ${TRUSTED_PROXY_REGEX}
+      remote-ip-header: x-forwarded-for
+      protocol-header: x-forwarded-proto
+  servlet:
+    session:
+      cookie:
+        secure: true
+logging:
+  structured:
+    format:
+      console: ecs
