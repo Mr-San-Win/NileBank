@@ -43,6 +43,7 @@ class MfaTest extends PostgresTest {
 
   @Autowired MfaService mfa;
   @Autowired AuthService auth;
+  @Autowired GoogleReauthentication googleReauthentication;
   @Autowired AccountService accounts;
   @Autowired ExternalIdentityService external;
   @Autowired UserRepository users;
@@ -404,7 +405,9 @@ class MfaTest extends PostgresTest {
     var disabled =
         new MfaSecrets(
             MfaCryptoTest.environment().withProperty("nilebank.auth.mfa.enabled", "false"), json);
-    var service = new MfaService(users, jdbc, passwordEncoder, disabled, transactionManager);
+    var service =
+        new MfaService(
+            users, jdbc, passwordEncoder, disabled, transactionManager, googleReauthentication);
     assertThat(MfaService.pending(service.gate(original))).isTrue();
     var missing =
         new MfaService(
@@ -412,7 +415,8 @@ class MfaTest extends PostgresTest {
             jdbc,
             passwordEncoder,
             new MfaSecrets(new org.springframework.mock.env.MockEnvironment(), json),
-            transactionManager);
+            transactionManager,
+            googleReauthentication);
     assertThatThrownBy(() -> missing.gate(original))
         .isInstanceOfSatisfying(
             com.nilebank.common.ApiException.class,

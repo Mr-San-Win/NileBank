@@ -167,8 +167,8 @@ Follow [MFA key operations](MFA.md) before enabling enrollment. Keep encryption 
 outside Git and database backups; retain the keys needed by all stored key IDs.
 Disabling new enrollment does not bypass existing factors. Missing keys fail closed
 for enrolled sign-ins. Rehearse key/database restoration together and monitor clock
-synchronization. Google-only enrollment and assisted lost-factor recovery are not
-implemented. No real production keys were created by this workstream.
+synchronization. Google-only enrollment requires the separately configured recent-Google-proof flow;
+assisted lost-all-factors recovery is not implemented. No real production keys were created by this workstream.
 
 See [email confirmation](EMAIL_VERIFICATION.md) before enabling EMAIL_VERIFICATION_ENABLED.
 Existing accounts are not automatically blocked for lacking confirmation.

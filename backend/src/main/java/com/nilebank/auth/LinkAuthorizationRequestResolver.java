@@ -34,6 +34,27 @@ public final class LinkAuthorizationRequestResolver implements OAuth2Authorizati
       HttpServletRequest request, OAuth2AuthorizationRequest authorization) {
     if (authorization == null) return null;
     var session = request.getSession(false);
+    Object reauth =
+        session == null ? null : session.getAttribute(GoogleReauthentication.SESSION_INTENT);
+    if (reauth != null) {
+      session.removeAttribute(GoogleReauthentication.SESSION_INTENT);
+      var auth = SecurityContextHolder.getContext().getAuthentication();
+      if (!(reauth instanceof GoogleReauthentication.Intent intent)
+          || !intent.expires().isAfter(Instant.now())
+          || auth == null
+          || !auth.getName().equals(intent.owner().toString())
+          || auth.getAuthorities().stream().noneMatch(a -> a.getAuthority().equals("ROLE_USER")))
+        throw new OAuth2AuthenticationException(
+            new OAuth2Error("invalid_reauthentication_intent"), "Verification request expired");
+      return OAuth2AuthorizationRequest.from(authorization)
+          .additionalParameters(
+              parameters -> {
+                parameters.put("prompt", "select_account");
+                parameters.put("claims", "{\"id_token\":{\"auth_time\":{\"essential\":true}}}");
+              })
+          .attributes(attributes -> attributes.put(GoogleReauthentication.REQUEST_INTENT, reauth))
+          .build();
+    }
     Object value =
         session == null ? null : session.getAttribute(AccountSecurityController.PENDING_LINK);
     if (value == null) return authorization;

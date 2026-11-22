@@ -292,6 +292,11 @@ try:
         page.goto(base + '/#verify=' + verification_token)
         expect(page.locator('#verification-panel')).to_be_visible()
         assert '#verify=' not in page.url
+        page.locator('#login-tab').click()
+        expect(page.locator('#verification-panel')).not_to_be_visible()
+        expect(page.locator('#auth-form')).to_be_visible()
+        page.goto(base + '/#verify=' + verification_token)
+        expect(page.locator('#verification-panel')).to_be_visible()
         page.locator('#verification-confirm').click()
         expect(page.locator('#verification-panel')).not_to_be_visible()
         expect(page.locator('#auth-form')).to_be_visible()

@@ -206,3 +206,12 @@ Full-user sessions can GET `/auth/security/email` and POST
 `/auth/email/confirm` accepts `{ "token": "..." }` with CSRF and returns 204 or
 controlled 400 for invalid/expired/replayed links. Confirmation creates no login,
 changes no credentials and grants no bank access. See [email confirmation](EMAIL_VERIFICATION.md).
+
+## Google-only MFA verification
+
+Authenticated full users can POST `/auth/security/google/reauthenticate` with CSRF.
+The server returns only `/oauth2/authorization/google`; the same-identity recent
+provider proof remains server-side. MFA settings additionally report `passwordRequired`
+and `googleVerified`. Google-only management can omit currentPassword only when
+that validated proof is present and fresh; ordinary password proof is unchanged.
+See [Google reauthentication](GOOGLE_REAUTHENTICATION.md).

@@ -100,3 +100,7 @@ A database outage also follows the generic OAuth failure path without authentica
 AUTH-002 verification: 132 tests passed with no failures/errors/skips. V11 adds
 credential versions. The OIDC callback result converter now performs local mapping
 and explicit linking after the standard OidcUserService has validated provider data.
+
+Optional [recent Google verification](GOOGLE_REAUTHENTICATION.md) supports
+Google-only MFA management. It requires the same bound subject and recent validated
+authentication time, never matching email or an unvalidated browser claim.

@@ -224,6 +224,12 @@ Existing login rules are preserved. [Configuration and rollout](docs/EMAIL_VERIF
 
 Email-confirmation verification passed **250 tests, 0 failures, 0 errors, 0 skipped**.
 
+Google-only MFA enrollment and management are implemented through explicit recent
+Google verification. The provider must supply a validated fresh `auth_time` claim;
+normal Google login remains unchanged. [Provider setup and safeguards](docs/GOOGLE_REAUTHENTICATION.md).
+
+The final remaining-scope suite passed **258 tests, 0 failures, 0 errors, 0 skipped**.
+
 ## Deployment preparation
 
 `compose.production.yaml` is a separate private single-host template with the `prod` profile, secure cookies, explicit proxy trust, environment checks, bounded resources and a non-superuser database application role. It still requires an operator-managed HTTPS proxy and external setup. [Read the runbook](docs/DEPLOYMENT.md) before using it. No public deployment has been performed; production readiness is not established.
@@ -234,11 +240,11 @@ Screenshots were captured from the running app using fictional users and persist
 
 ## Limitations and future improvements
 
-One primary THB account with USD/EUR/MMK/SGD/JPY/CNY exchange wallets. JPY uses whole yen; other supported currencies use two decimals. Ordinary withdrawals and account-to-account transfers use THB. Optional SMTP password reset is implemented and disabled by default; real delivery must be configured and verified. Optional TOTP MFA requires an encryption key ring; Google-only enrollment is not supported. Optional email confirmation is implemented without locking existing users out. No admin UI or self-service primary-account freeze action. Basic per-process authentication rate limiting is implemented; distributed abuse protection still needs a trusted ingress. Frozen state is enforced in the backend and integration tests. Sessions live in application memory and expire on restart. The UI keeps a pending transfer key in tab memory: after a reload or uncertain response, inspect history before starting a fresh transfer. Deposits and withdrawals now accept scoped retry keys; the browser retains one for the same open form. Reloading or opening a new form creates a new key, so inspect history after an uncertain response before starting again. Legacy API calls without keys remain non-idempotent.
+One primary THB account with USD/EUR/MMK/SGD/JPY/CNY exchange wallets. JPY uses whole yen; other supported currencies use two decimals. Ordinary withdrawals and account-to-account transfers use THB. Optional SMTP password reset is implemented and disabled by default; real delivery must be configured and verified. Optional TOTP MFA requires an encryption key ring; Google-only enrollment uses optional recent Google verification and requires provider claim setup. Optional email confirmation is implemented without locking existing users out. No admin UI or self-service primary-account freeze action. Basic per-process authentication rate limiting is implemented; distributed abuse protection still needs a trusted ingress. Frozen state is enforced in the backend and integration tests. Sessions live in application memory and expire on restart. The UI keeps a pending transfer key in tab memory: after a reload or uncertain response, inspect history before starting a fresh transfer. Deposits and withdrawals now accept scoped retry keys; the browser retains one for the same open form. Reloading or opening a new form creates a new key, so inspect history after an uncertain response before starting again. Legacy API calls without keys remain non-idempotent.
 
 History contains successful financial operations only. The database owner could alter/disable its trigger; it is not an externally tamper-proof ledger. No independent security audit or performance benchmarks have been performed. No public deployment or real payment integrations exist.
 
-Potential improvements: rate limits and authentication abuse monitoring, email verification and assisted factor recovery, stronger operational observability, more browser automation, an independently designed ledger, and reconciliation. Keep these separate from the simulator's educational claims.
+Potential improvements: rate limits and authentication abuse monitoring, additional recovery/support policy, stronger operational observability, more browser automation, an independently designed ledger, and reconciliation. Keep these separate from the simulator's educational claims.
 
 ## Further reading
 

@@ -32,8 +32,7 @@ public class MfaController {
     this.contexts = contexts;
   }
 
-  public record Proof(
-      @NotBlank @Size(max = 72) String currentPassword, @Size(max = 64) String code) {}
+  public record Proof(@Size(max = 72) String currentPassword, @Size(max = 64) String code) {}
 
   public record Code(@NotBlank @Size(max = 64) String code) {}
 
@@ -88,18 +87,20 @@ public class MfaController {
 
   @GetMapping("/api/v1/auth/security/mfa")
   public MfaService.Settings settings(Principal p) {
-    return mfa.settings(UUID.fromString(p.getName()));
+    return mfa.settings(UUID.fromString(p.getName()), googleProof());
   }
 
   @PostMapping("/api/v1/auth/security/mfa/enroll")
   public MfaService.Enrollment begin(Principal p, @Valid @RequestBody Proof body) {
-    return mfa.begin(UUID.fromString(p.getName()), body.currentPassword());
+    return mfa.begin(UUID.fromString(p.getName()), body.currentPassword(), googleProof());
   }
 
   @PostMapping("/api/v1/auth/security/mfa/confirm")
   public Map<String, List<String>> confirm(
       Principal p, @Valid @RequestBody Proof body, HttpServletRequest request) {
-    var codes = mfa.confirm(UUID.fromString(p.getName()), body.currentPassword(), body.code());
+    var codes =
+        mfa.confirm(
+            UUID.fromString(p.getName()), body.currentPassword(), body.code(), googleProof());
     invalidate(request);
     return Map.of("recoveryCodes", codes);
   }
@@ -107,7 +108,12 @@ public class MfaController {
   @PostMapping("/api/v1/auth/security/mfa/disable")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void disable(Principal p, @Valid @RequestBody Proof body, HttpServletRequest request) {
-    mfa.disable(UUID.fromString(p.getName()), body.currentPassword(), body.code(), stamp(request));
+    mfa.disable(
+        UUID.fromString(p.getName()),
+        body.currentPassword(),
+        body.code(),
+        stamp(request),
+        googleProof());
     invalidate(request);
   }
 
@@ -116,9 +122,17 @@ public class MfaController {
       Principal p, @Valid @RequestBody Proof body, HttpServletRequest request) {
     var codes =
         mfa.regenerate(
-            UUID.fromString(p.getName()), body.currentPassword(), body.code(), stamp(request));
+            UUID.fromString(p.getName()),
+            body.currentPassword(),
+            body.code(),
+            stamp(request),
+            googleProof());
     invalidate(request);
     return Map.of("recoveryCodes", codes);
+  }
+
+  private GoogleReauthentication.Proof googleProof() {
+    return GoogleReauthentication.proof(SecurityContextHolder.getContext().getAuthentication());
   }
 
   private MfaService.Verified stamp(HttpServletRequest request) {

@@ -109,7 +109,15 @@ public class SecurityConfig {
                                 ? SecurityEvents.Event.MFA_REQUIRED
                                 : SecurityEvents.Event.LOGIN,
                             java.util.UUID.fromString(authentication.getName()));
-                        response.sendRedirect("/");
+                        var primary =
+                            com.nilebank.auth.mfa.MfaService.pending(authentication)
+                                ? com.nilebank.auth.mfa.MfaService.pendingState(authentication)
+                                    .original()
+                                : authentication;
+                        response.sendRedirect(
+                            GoogleReauthentication.proof(primary) != null
+                                ? "/?security=verified"
+                                : "/");
                       })
                   .failureHandler(
                       (request, response, exception) -> {

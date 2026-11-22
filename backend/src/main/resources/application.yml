@@ -45,6 +45,7 @@ nilebank:
       smtp-password: ${RECOVERY_SMTP_PASSWORD:}
       smtp-starttls: ${RECOVERY_SMTP_STARTTLS:true}
     google:
+      reauth-enabled: ${GOOGLE_REAUTH_ENABLED:false}
       enabled: ${GOOGLE_LOGIN_ENABLED:false}
       client-id: ${GOOGLE_CLIENT_ID:}
       client-secret: ${GOOGLE_CLIENT_SECRET:}

@@ -9,7 +9,7 @@ export function createVerification({ api, notify, getUser, onOpen, onComplete })
   }
   capture();
   function close() { token = null; $("#verification-panel").hidden = true; $("#verification-error").hidden = true; $("#auth-form").hidden = false; }
-  function reset() { generation++; $("#email-verification-status").textContent = "Loading email confirmation status…"; $("#email-verification-request").disabled = true; }
+  function reset() { $("#verification-panel").hidden = true; $("#verification-error").hidden = true; generation++; $("#email-verification-status").textContent = "Loading email confirmation status…"; $("#email-verification-request").disabled = true; }
   function show() { $("#auth-form").hidden = true; $("#recovery-panel").hidden = true; $("#mfa-challenge-panel").hidden = true; $("#verification-panel").hidden = false; $("#verification-confirm").focus(); }
   async function open() {
     reset(); const current = generation;

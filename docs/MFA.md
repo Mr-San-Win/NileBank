@@ -59,8 +59,9 @@ Wait for a different TOTP after enrollment: its confirmation code cannot be repl
 A recent server-side MFA stamp lets a user who just consumed their last recovery code
 manage the factor with fresh password proof; expired/wrong-owner/version stamps fail.
 
-Initial enrollment requires a local password. Google-only profiles cannot fabricate
-one; their enrollment remains unavailable. Once a password profile has MFA, linked
+Enrollment requires a current local password, or for Google-only profiles an explicit
+recent same-identity Google verification. No password is fabricated. See
+[Google reauthentication](GOOGLE_REAUTHENTICATION.md) for required provider configuration. Once a password profile has MFA, linked
 Google sign-in also requires it. Password/email recovery changes only the password;
 it does not remove MFA or bypass its next sign-in challenge. There is no support or
 email shortcut for a lost factor. Retain your authenticator and offline recovery codes.
@@ -120,8 +121,8 @@ The isolated browser script exercises manual setup, confirmation, replay rejecti
 TOTP login, recovery-code replacement/login and protected disable. See the testing
 and implementation-status documents for actual completed-run totals.
 
-No authenticator push, WebAuthn/passkeys, factor-change email alerts, Google-only
-enrollment or assisted factor recovery is implemented. All authentication sessions
+No authenticator push, WebAuthn/passkeys, factor-change email alerts or assisted
+lost-all-factors recovery is implemented. All authentication sessions
 remain in memory. No independent security audit or public environment verification
 has been performed.
 

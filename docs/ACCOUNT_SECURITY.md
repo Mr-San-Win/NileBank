@@ -64,8 +64,8 @@ SMTP/inbox delivery remains an operator setup requirement. MFA is not reset by e
 Optional TOTP enrollment requires an environment-managed encryption key ring. Both
 password and Google login use the same pending-factor gate; protected APIs require
 full USER authority. Seeds are encrypted and recovery codes are hashed and single-use.
-Credential changes revoke sessions. New enrollment currently requires a local password;
-existing enrolled password profiles also require their factor when using linked Google.
+Credential changes revoke sessions. Enrollment requires current-password proof, or explicit recent Google proof for
+Google-only profiles. Both primary login methods still require any enrolled factor.
 See [MFA design and operations](MFA.md). Email/password reset never removes this factor.
 
 ## Verification
@@ -81,3 +81,6 @@ failures/errors/skips, plus actual SMTP/browser reset and old-session revocation
 MFA verification passed the complete **239-test** PostgreSQL-backed suite, including
 a signed Google callback requiring a second factor. See [MFA](MFA.md) for the
 restricted pending principal and enrollment/key-management limitations.
+
+[Google-only verification](GOOGLE_REAUTHENTICATION.md) is implemented without first
+creating local credentials. The complete remaining-scope suite passed 258 tests.

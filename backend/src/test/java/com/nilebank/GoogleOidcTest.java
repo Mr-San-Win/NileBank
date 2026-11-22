@@ -40,6 +40,7 @@ class GoogleOidcTest extends PostgresTest {
   @org.springframework.test.context.DynamicPropertySource
   static void mfaKeys(org.springframework.test.context.DynamicPropertyRegistry r) {
     r.add("nilebank.auth.mfa.enabled", () -> true);
+    r.add("nilebank.auth.google.reauth-enabled", () -> true);
     r.add("nilebank.auth.mfa.active-key-id", () -> "test");
     r.add("nilebank.auth.mfa.keys-json", () -> "{\"test\":\"" + MfaCryptoTest.TEST_KEY + "\"}");
   }
@@ -197,6 +198,12 @@ class GoogleOidcTest extends PostgresTest {
             .claim("email", f.email)
             .claim("email_verified", !f.mode.equals("unverified"))
             .claim("name", "OIDC Demo Student");
+    if (f.mode.equals("invalidAuth")) claims.claim("auth_time", Map.of("invalid", "value"));
+    if (f.mode.equals("recentAuth")) claims.claim("auth_time", now.getEpochSecond());
+    if (f.mode.equals("oldAuth"))
+      claims.claim("auth_time", now.minusSeconds(3600).getEpochSecond());
+    if (f.mode.equals("futureAuth"))
+      claims.claim("auth_time", now.plusSeconds(600).getEpochSecond());
     if (f.mode.equals("missingNonce")) claims.claim("nonce", null);
     if (f.mode.equals("authorizedParty"))
       claims.audience(List.of(CLIENT, "other-client")).claim("azp", "other-client");
@@ -253,6 +260,7 @@ class GoogleOidcTest extends PostgresTest {
   }
 
   Flow startInSession(String subject, String email, MockHttpSession session) throws Exception {
+    boolean reauthentication = session.getAttribute(GoogleReauthentication.SESSION_INTENT) != null;
     var csrfResponse =
         mvc.perform(get("/api/v1/auth/csrf").session(session))
             .andExpect(status().isOk())
@@ -272,6 +280,16 @@ class GoogleOidcTest extends PostgresTest {
             .andExpect(status().isFound())
             .andReturn();
     var params = params(URI.create(result.getResponse().getRedirectedUrl()).getRawQuery());
+    if (reauthentication) {
+      assertThat(params.get("prompt")).isEqualTo("select_account");
+      assertThat(
+              JSON.readTree(params.get("claims"))
+                  .path("id_token")
+                  .path("auth_time")
+                  .path("essential")
+                  .asBoolean())
+          .isTrue();
+    }
     assertThat(params.get("response_type")).isEqualTo("code");
     assertThat(params.get("code_challenge_method")).isEqualTo("S256");
     assertThat(params.get("code_challenge")).isNotBlank();
@@ -304,6 +322,162 @@ class GoogleOidcTest extends PostgresTest {
     callback(flow).andExpect(status().isFound()).andExpect(redirectedUrl("/?authError=google"));
     mvc.perform(get("/api/v1/auth/me").session(flow.session)).andExpect(status().isUnauthorized());
     assertThat(identities.findByIssuerAndProviderSubject(ISSUER, flow.fixture.subject)).isEmpty();
+  }
+
+  void prepareReauthentication(MockHttpSession session) throws Exception {
+    mvc.perform(
+            post("/api/v1/auth/security/google/reauthenticate")
+                .session(session)
+                .with(
+                    org.springframework.security.test.web.servlet.request
+                        .SecurityMockMvcRequestPostProcessors.csrf()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.redirect").value("/oauth2/authorization/google"));
+  }
+
+  Flow recent(Flow previous) throws Exception {
+    prepareReauthentication(previous.session);
+    var flow = startInSession(previous.fixture.subject, previous.fixture.email, previous.session);
+    flow.fixture.mode = "recentAuth";
+    callback(flow).andExpect(redirectedUrl("/?security=verified"));
+    return flow;
+  }
+
+  @Test
+  void googleOnlyUserCanEnrollAndManageMfaAfterValidatedRecentIdentityProof() throws Exception {
+    var flow = start();
+    callback(flow).andExpect(redirectedUrl("/"));
+    UUID owner = users.findByEmail(flow.fixture.email).orElseThrow().getId();
+    assertThat(mfa.settings(owner).available()).isTrue();
+    mvc.perform(
+            post("/api/v1/auth/security/mfa/enroll")
+                .session(flow.session)
+                .with(
+                    org.springframework.security.test.web.servlet.request
+                        .SecurityMockMvcRequestPostProcessors.csrf())
+                .contentType("application/json")
+                .content("{}"))
+        .andExpect(status().isUnauthorized());
+    flow = recent(flow);
+    var begin =
+        mvc.perform(
+                post("/api/v1/auth/security/mfa/enroll")
+                    .session(flow.session)
+                    .with(
+                        org.springframework.security.test.web.servlet.request
+                            .SecurityMockMvcRequestPostProcessors.csrf())
+                    .contentType("application/json")
+                    .content("{}"))
+            .andExpect(status().isOk())
+            .andReturn();
+    String secret = JSON.readTree(begin.getResponse().getContentAsString()).path("secret").asText();
+    var confirmed =
+        mvc.perform(
+                post("/api/v1/auth/security/mfa/confirm")
+                    .session(flow.session)
+                    .with(
+                        org.springframework.security.test.web.servlet.request
+                            .SecurityMockMvcRequestPostProcessors.csrf())
+                    .contentType("application/json")
+                    .content(
+                        JSON.writeValueAsString(
+                            Map.of(
+                                "code",
+                                com.nilebank.auth.mfa.Totp.code(
+                                    com.nilebank.auth.mfa.Totp.decode(secret),
+                                    Instant.now().getEpochSecond() / 30)))))
+            .andExpect(status().isOk())
+            .andReturn();
+    var codes = JSON.readTree(confirmed.getResponse().getContentAsString()).path("recoveryCodes");
+    assertThat(codes.size()).isEqualTo(8);
+    assertThat(users.findById(owner).orElseThrow().getPasswordHash()).isNull();
+    var login = start(flow.fixture.subject, flow.fixture.email);
+    callback(login).andExpect(redirectedUrl("/"));
+    mvc.perform(
+            post("/api/v1/auth/mfa/challenge")
+                .session(login.session)
+                .with(
+                    org.springframework.security.test.web.servlet.request
+                        .SecurityMockMvcRequestPostProcessors.csrf())
+                .contentType("application/json")
+                .content(JSON.writeValueAsString(Map.of("code", codes.get(0).asText()))))
+        .andExpect(status().isOk());
+    mvc.perform(
+            post("/api/v1/auth/security/mfa/recovery-codes")
+                .session(login.session)
+                .with(
+                    org.springframework.security.test.web.servlet.request
+                        .SecurityMockMvcRequestPostProcessors.csrf())
+                .contentType("application/json")
+                .content("{}"))
+        .andExpect(status().isUnauthorized());
+    var verified = recent(login);
+    mvc.perform(get("/api/v1/auth/me").session(verified.session)).andExpect(status().isForbidden());
+    mvc.perform(
+            post("/api/v1/auth/mfa/challenge")
+                .session(verified.session)
+                .with(
+                    org.springframework.security.test.web.servlet.request
+                        .SecurityMockMvcRequestPostProcessors.csrf())
+                .contentType("application/json")
+                .content(JSON.writeValueAsString(Map.of("code", codes.get(1).asText()))))
+        .andExpect(status().isOk());
+    mvc.perform(
+            post("/api/v1/auth/security/mfa/disable")
+                .session(verified.session)
+                .with(
+                    org.springframework.security.test.web.servlet.request
+                        .SecurityMockMvcRequestPostProcessors.csrf())
+                .contentType("application/json")
+                .content("{}"))
+        .andExpect(status().isNoContent());
+    assertThat(mfa.settings(owner).enabled()).isFalse();
+    assertThat(users.findById(owner).orElseThrow().getPasswordHash()).isNull();
+  }
+
+  @Test
+  void reauthenticationRejectsMissingOldAndFutureAuthTime() throws Exception {
+    for (String mode : List.of("normal", "oldAuth", "futureAuth", "invalidAuth")) {
+      var first = start();
+      callback(first).andExpect(redirectedUrl("/"));
+      prepareReauthentication(first.session);
+      var flow = startInSession(first.fixture.subject, first.fixture.email, first.session);
+      flow.fixture.mode = mode;
+      callback(flow).andExpect(redirectedUrl("/?authError=google"));
+      var saved =
+          (org.springframework.security.core.context.SecurityContext)
+              flow.session.getAttribute(
+                  org.springframework.security.web.context.HttpSessionSecurityContextRepository
+                      .SPRING_SECURITY_CONTEXT_KEY);
+      assertThat(GoogleReauthentication.proof(saved == null ? null : saved.getAuthentication()))
+          .isNull();
+    }
+  }
+
+  @Test
+  void recentOtherSubjectCannotReauthenticateByMatchingEmailOrProvisionUser() throws Exception {
+    var first = start();
+    callback(first).andExpect(redirectedUrl("/"));
+    long before = users.count();
+    prepareReauthentication(first.session);
+    var flow = startInSession(UUID.randomUUID().toString(), first.fixture.email, first.session);
+    flow.fixture.mode = "recentAuth";
+    callback(flow).andExpect(redirectedUrl("/?authError=google"));
+    assertThat(users.count()).isEqualTo(before);
+  }
+
+  @Test
+  void reauthenticationPreparationNeedsFullSessionAndCsrf() throws Exception {
+    mvc.perform(
+            post("/api/v1/auth/security/google/reauthenticate")
+                .with(
+                    org.springframework.security.test.web.servlet.request
+                        .SecurityMockMvcRequestPostProcessors.csrf()))
+        .andExpect(status().isUnauthorized());
+    var flow = start();
+    callback(flow).andExpect(redirectedUrl("/"));
+    mvc.perform(post("/api/v1/auth/security/google/reauthenticate").session(flow.session))
+        .andExpect(status().isForbidden());
   }
 
   @Test

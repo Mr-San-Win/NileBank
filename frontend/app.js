@@ -15,6 +15,7 @@ const state = {
   view: "overview",
   page: 0,
   moneyMode: "deposit",
+  securityAfterLogin: false,
   pending: null,
   pendingCash: null,
 };
@@ -266,6 +267,7 @@ async function showBank() {
   configureCurrencies(await api("/exchange/currencies"));
   await loadAccount();
   await navigate("overview");
+  if (state.securityAfterLogin) { state.securityAfterLogin = false; await navigate("security"); }
 }
 async function navigate(view) {
   if (["transfer","exchange","partners","savings"].includes(view) && !state.account) {
@@ -461,8 +463,8 @@ function openMoney(mode) {
   $("#money-amount").focus();
 }
 
-$("#login-tab").addEventListener("click", () => { mfa.reset(); recovery.close(); authMode("login"); });
-$("#register-tab").addEventListener("click", () => { mfa.reset(); recovery.close(); authMode("register"); });
+$("#login-tab").addEventListener("click", () => { mfa.reset(); recovery.close(); verification.close(); authMode("login"); });
+$("#register-tab").addEventListener("click", () => { mfa.reset(); recovery.close(); verification.close(); authMode("register"); });
 $("#auth-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   setError("#auth-error");
@@ -644,6 +646,8 @@ $("#next-page").addEventListener("click", async () => {
 async function init() {
   authMode("login");
   const params = new URLSearchParams(location.search);
+  state.securityAfterLogin = params.get("security") === "verified";
+  if (params.has("security")) { params.delete("security"); history.replaceState(null, "", location.pathname + (params.size ? "?" + params : "") + location.hash); }
   const googleFailure = params.get("authError") === "google";
   if (params.has("authError")) {
     if (params.get("authError") === "google")

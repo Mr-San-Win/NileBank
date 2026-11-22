@@ -43,6 +43,7 @@ public class AccountSecurityController {
       throw new com.nilebank.common.ApiException(
           HttpStatus.CONFLICT, "Google sign-in is not enabled");
     var intent = service.prepareLink(UUID.fromString(principal.getName()), proof.currentPassword());
+    request.getSession().removeAttribute(GoogleReauthentication.SESSION_INTENT);
     request.getSession().setAttribute(PENDING_LINK, intent);
     return Map.of("redirect", "/oauth2/authorization/google");
   }

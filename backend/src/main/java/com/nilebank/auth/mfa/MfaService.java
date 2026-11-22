@@ -29,7 +29,12 @@ public class MfaService {
 
   public record Verified(UUID owner, long version, Instant at) implements java.io.Serializable {}
 
-  public record Settings(boolean available, boolean enabled, long recoveryCodesRemaining) {}
+  public record Settings(
+      boolean available,
+      boolean enabled,
+      long recoveryCodesRemaining,
+      boolean passwordRequired,
+      boolean googleVerified) {}
 
   public record Enrollment(
       String secret, String issuer, String account, int digits, int period, Instant expiresAt) {}
@@ -46,6 +51,7 @@ public class MfaService {
   private record Result(boolean ok, boolean limited) {}
 
   private final UserRepository users;
+  private final GoogleReauthentication google;
   private final JdbcTemplate jdbc;
   private final PasswordEncoder passwords;
   private final MfaSecrets secrets;
@@ -57,8 +63,10 @@ public class MfaService {
       JdbcTemplate jdbc,
       PasswordEncoder passwords,
       MfaSecrets secrets,
-      PlatformTransactionManager manager) {
+      PlatformTransactionManager manager,
+      GoogleReauthentication google) {
     this.users = users;
+    this.google = google;
     this.jdbc = jdbc;
     this.passwords = passwords;
     this.secrets = secrets;
@@ -87,22 +95,33 @@ public class MfaService {
         .findFirst();
   }
 
-  private void proof(BankUser user, String password) {
-    if (user.getPasswordHash() == null
-        || password == null
+  private void proof(BankUser user, String password, GoogleReauthentication.Proof googleProof) {
+    if (user.getPasswordHash() == null) {
+      if (!google.valid(user, googleProof))
+        throw new ApiException(
+            HttpStatus.UNAUTHORIZED,
+            "Complete recent Google verification before changing authenticator protection");
+      return;
+    }
+    if (password == null
         || password.getBytes(StandardCharsets.UTF_8).length > 72
         || !passwords.matches(password, user.getPasswordHash()))
       throw new ApiException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
   }
 
   public Settings settings(UUID owner) {
+    return settings(owner, null);
+  }
+
+  public Settings settings(UUID owner, GoogleReauthentication.Proof proof) {
     return tx.execute(
         s -> {
           var user = users.findById(owner).orElseThrow(MfaService::invalid);
           var row = row(owner);
           boolean active = row.isPresent() && row.get().status.equals("ACTIVE");
           return new Settings(
-              secrets.enrollmentAvailable() && user.getPasswordHash() != null,
+              secrets.enrollmentAvailable()
+                  && (user.getPasswordHash() != null || google.supports(owner)),
               active,
               active
                   ? jdbc.queryForObject(
@@ -110,15 +129,21 @@ public class MfaService {
                           + " null",
                       Long.class,
                       owner)
-                  : 0);
+                  : 0,
+              user.getPasswordHash() != null,
+              google.valid(user, proof));
         });
   }
 
   public Enrollment begin(UUID owner, String password) {
+    return begin(owner, password, null);
+  }
+
+  public Enrollment begin(UUID owner, String password, GoogleReauthentication.Proof googleProof) {
     return tx.execute(
         s -> {
           var user = lock(owner);
-          proof(user, password);
+          proof(user, password, googleProof);
           if (!secrets.enrollmentAvailable()) throw MfaSecrets.unavailable();
           if (row(owner).map(r -> r.status.equals("ACTIVE")).orElse(false))
             throw new ApiException(HttpStatus.CONFLICT, "Authenticator is already enabled");
@@ -142,11 +167,16 @@ public class MfaService {
   }
 
   public List<String> confirm(UUID owner, String password, String code) {
+    return confirm(owner, password, code, null);
+  }
+
+  public List<String> confirm(
+      UUID owner, String password, String code, GoogleReauthentication.Proof googleProof) {
     var result =
         tx.execute(
             s -> {
               var user = lock(owner);
-              proof(user, password);
+              proof(user, password, googleProof);
               Row row = row(owner).orElseThrow(MfaService::invalid);
               if (!row.status.equals("PENDING") || !row.expires.isAfter(Instant.now()))
                 throw invalid();
@@ -227,11 +257,20 @@ public class MfaService {
   }
 
   public void disable(UUID owner, String password, String code, Verified verified) {
+    disable(owner, password, code, verified, null);
+  }
+
+  public void disable(
+      UUID owner,
+      String password,
+      String code,
+      Verified verified,
+      GoogleReauthentication.Proof googleProof) {
     Result result =
         tx.execute(
             s -> {
               var user = lock(owner);
-              proof(user, password);
+              proof(user, password, googleProof);
               var row = row(owner).orElseThrow(MfaService::invalid);
               if (!row.status.equals("ACTIVE")) throw invalid();
               Result checked =
@@ -247,11 +286,20 @@ public class MfaService {
   }
 
   public List<String> regenerate(UUID owner, String password, String code, Verified verified) {
+    return regenerate(owner, password, code, verified, null);
+  }
+
+  public List<String> regenerate(
+      UUID owner,
+      String password,
+      String code,
+      Verified verified,
+      GoogleReauthentication.Proof googleProof) {
     var result =
         tx.execute(
             s -> {
               var user = lock(owner);
-              proof(user, password);
+              proof(user, password, googleProof);
               var row = row(owner).orElseThrow(MfaService::invalid);
               if (!row.status.equals("ACTIVE")) throw invalid();
               Result checked =
