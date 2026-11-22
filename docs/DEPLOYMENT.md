@@ -172,3 +172,8 @@ assisted lost-all-factors recovery is not implemented. No real production keys w
 
 See [email confirmation](EMAIL_VERIFICATION.md) before enabling EMAIL_VERIFICATION_ENABLED.
 Existing accounts are not automatically blocked for lacking confirmation.
+
+## Operational tools
+
+See [HTTPS, encrypted backups and readiness tooling](OPERATIONS.md). Real-host
+verification, off-host storage and alert delivery remain required.

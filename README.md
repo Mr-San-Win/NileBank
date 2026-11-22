@@ -255,3 +255,5 @@ Potential improvements: rate limits and authentication abuse monitoring, additio
 **San Win**  
 Software Engineering Student — KMITL, Thailand
 
+
+Operational preparation: [HTTPS, encrypted backups and health checks](docs/OPERATIONS.md).

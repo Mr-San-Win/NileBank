@@ -17,7 +17,7 @@ V1–V9 migrations were preserved. New migrations are V10–V18.
 | UI-001 | Implemented and exercised | Existing vanilla-JS interface extended with security, seven currencies, categories/recurrence and real savings. Actual Chromium forms, confirmation flows, navigation and 390px overflow checks passed. No formal accessibility audit. |
 | TEST-001 | Implemented | PostgreSQL 17 Testcontainers, deterministic OIDC protocol fixtures, financial invariants, recurrence, revocation and production-profile HTTP tests. Final totals below. |
 | DOC-001 | Implemented | README, API/architecture, identity/security, currencies, recurrence, savings, migrations, testing, deployment and privacy documentation. |
-| DEPLOY-001 | Preparation implemented | Secure production profile, environment checks, exact configured proxy trust, structured logs, private DB, non-superuser app role, resource limits and read-only app filesystem. Local template/restore checks passed. Public environment verification remains outstanding. |
+| DEPLOY-001 | Preparation implemented | Secure production profile, environment checks, exact configured proxy trust, structured logs, private DB, non-superuser app role, resource limits and read-only app filesystem. Local template/restore checks passed. Host Nginx ingress template, GPG-encrypted backup tooling and certificate-validating health probe are implemented and locally tested; external activation remains outstanding. |
 
 ## Executed evidence
 
@@ -89,3 +89,14 @@ monitoring/off-host backups and privacy/support ownership. Mandatory email enfor
 for existing/new public users needs a deliberate rollout decision; local compatibility
 is preserved. No push or deployment is authorized here. Recovery codes are the
 implemented lost-authenticator path; no email-only bypass for lost-all-factors exists.
+
+## Operational tooling checkpoint
+
+The full Maven suite was rerun: 258 passed, zero failures/errors/skips. Six
+operational unit tests passed. Isolated PostgreSQL encrypted backup/restore,
+permissions, overwrite refusal, corrupted ciphertext rejection and failed-dump
+cleanup passed. Real local HTTPS accepted a trusted QA certificate and rejected
+an untrusted one. The Nginx template passed syntax validation with actual QA
+certificate files; real proxy forwarding/cookies/rate behavior still needs staging.
+See [operational preparation](OPERATIONS.md). No dependencies, application logic
+or migrations changed. Hosting is not selected, and no public deployment is authorized.
