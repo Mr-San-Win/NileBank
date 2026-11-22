@@ -38,7 +38,13 @@ public final class CredentialVersionFilter extends OncePerRequestFilter {
         // Legacy sessions and Spring test principals belong to pre-revocation version zero.
         long version =
             auth.getPrincipal() instanceof VersionedPrincipal p ? p.credentialVersion() : 0;
-        revoked = user.isEmpty() || user.get().getCredentialVersion() != version;
+        revoked =
+            user.isEmpty()
+                || user.get().getCredentialVersion() != version
+                || (com.nilebank.auth.mfa.MfaService.pending(auth)
+                    && !com.nilebank.auth.mfa.MfaService.pendingState(auth)
+                        .expires()
+                        .isAfter(java.time.Instant.now()));
       } catch (IllegalArgumentException invalidIdentity) {
         revoked = true;
       } catch (org.springframework.dao.DataAccessException unavailable) {

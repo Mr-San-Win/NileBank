@@ -145,7 +145,8 @@ approve retention; review database logs separately for PII.
 ## Privacy and remaining release gates
 
 Read [privacy/retention policy](PRIVACY.md). Optional password recovery is default-off and requires verified real SMTP/inbox
-delivery before advertising it. Email verification and MFA are unavailable. Public users need clear account recovery
+delivery before advertising it. Email verification remains unavailable. TOTP MFA is optional and requires the key
+management and rollout checks in the MFA runbook. Public users need clear account recovery
 limitations, support and a deletion policy. Real Google consent, trusted TLS ingress,
 abuse controls, encrypted off-host backups, operational monitoring and privacy
 handling still require environment verification and ownership. The template and local
@@ -159,3 +160,12 @@ authenticated STARTTLS and certificate verification. Local SMTP/browser tests do
 prove production inbox delivery. Keep credentials in the protected environment;
 configure sender DNS and mail quotas externally. V16 is additive; existing users and
 financial records are unchanged.
+
+## Authenticator keys
+
+Follow [MFA key operations](MFA.md) before enabling enrollment. Keep encryption keys
+outside Git and database backups; retain the keys needed by all stored key IDs.
+Disabling new enrollment does not bypass existing factors. Missing keys fail closed
+for enrolled sign-ins. Rehearse key/database restoration together and monitor clock
+synchronization. Google-only enrollment and assisted lost-factor recovery are not
+implemented. No real production keys were created by this workstream.

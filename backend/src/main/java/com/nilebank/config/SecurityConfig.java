@@ -105,7 +105,9 @@ public class SecurityConfig {
                   .successHandler(
                       (request, response, authentication) -> {
                         SecurityEvents.record(
-                            SecurityEvents.Event.LOGIN,
+                            com.nilebank.auth.mfa.MfaService.pending(authentication)
+                                ? SecurityEvents.Event.MFA_REQUIRED
+                                : SecurityEvents.Event.LOGIN,
                             java.util.UUID.fromString(authentication.getName()));
                         response.sendRedirect("/");
                       })
@@ -122,7 +124,7 @@ public class SecurityConfig {
     http.securityContext(c -> c.securityContextRepository(contexts))
         .csrf(c -> c.csrfTokenRepository(csrfTokens))
         .authorizeHttpRequests(
-            a -> a.requestMatchers(PublicEndpoints.PATHS).permitAll().anyRequest().authenticated())
+            a -> a.requestMatchers(PublicEndpoints.PATHS).permitAll().anyRequest().hasRole("USER"))
         .exceptionHandling(
             e ->
                 e.authenticationEntryPoint(

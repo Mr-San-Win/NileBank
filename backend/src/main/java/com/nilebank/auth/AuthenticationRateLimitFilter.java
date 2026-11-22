@@ -57,6 +57,7 @@ public final class AuthenticationRateLimitFilter extends OncePerRequestFilter {
             || path.equals("/api/v1/auth/register")
             || path.startsWith("/api/v1/auth/security/")
             || path.startsWith("/api/v1/auth/recovery/")
+            || path.startsWith("/api/v1/auth/mfa/")
             || path.equals("/oauth2/authorization/google")
             || path.equals("/login/oauth2/code/google");
     if (sensitive && !allow(request.getRemoteAddr())) {

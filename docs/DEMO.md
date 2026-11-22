@@ -41,7 +41,11 @@ See [currency exchange, fictional banks and finance tracking](EXTENSIONS.md) for
 - Finance: edit a manual entry, filter/sort, set a monthly category budget and
   inspect the deterministic summary. Explain why this never debits simulated money.
 - Security: inspect available sign-in methods. Password changes invalidate existing
-  sessions. Google is hidden until configured; recovery and MFA are unavailable.
+  sessions. Google is hidden until configured; recovery and authenticator enrollment require explicit environment configuration.
 
 Use [the isolated browser walkthrough](TESTING.md) for reproducible checks without
 changing the existing demo database.
+
+With local QA configuration, demonstrate authenticator setup, one-time recovery
+codes, pending-login API denial, a fresh TOTP login and code replacement. Never use
+production keys or real emails in a portfolio demonstration. See [MFA](MFA.md).

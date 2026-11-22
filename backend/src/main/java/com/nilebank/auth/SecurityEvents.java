@@ -9,6 +9,11 @@ import org.springframework.transaction.support.*;
  */
 public final class SecurityEvents {
   public enum Event {
+    MFA_REQUIRED,
+    MFA_FAILED,
+    MFA_ENABLED,
+    MFA_DISABLED,
+    MFA_CODES_REPLACED,
     LOGIN,
     LOGIN_FAILED,
     PASSWORD_CHANGED,

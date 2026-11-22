@@ -86,7 +86,7 @@ session ID/CSRF rotation, banking ownership and logout. No real Google credentia
 or network access are needed for these tests. This does not verify a real Google
 Cloud client or a production reverse proxy.
 
-Explicit linking/unlinking, credential revocation and basic abuse controls are documented in [account security](ACCOUNT_SECURITY.md). Recovery and MFA remain unavailable.
+Explicit linking/unlinking, credential revocation and basic abuse controls are documented in [account security](ACCOUNT_SECURITY.md). Optional SMTP recovery and encrypted TOTP MFA are implemented and disabled for new enrollment/delivery until configured. See [recovery](PASSWORD_RECOVERY.md) and [MFA](MFA.md).
 Database uniqueness errors can include identity metadata in infrastructure logs;
 production logging/redaction must be reviewed before exposing public registration.
 

@@ -15,17 +15,20 @@ public class AccountSecurityService {
   private final UserRepository users;
   private final ExternalIdentityRepository identities;
   private final PasswordEncoder encoder;
+  private final com.nilebank.auth.mfa.MfaService mfa;
   private final com.nilebank.auth.recovery.PasswordRecoveryService recovery;
 
   public AccountSecurityService(
       UserRepository users,
       ExternalIdentityRepository identities,
       PasswordEncoder encoder,
-      com.nilebank.auth.recovery.PasswordRecoveryService recovery) {
+      com.nilebank.auth.recovery.PasswordRecoveryService recovery,
+      com.nilebank.auth.mfa.MfaService mfa) {
     this.users = users;
     this.identities = identities;
     this.encoder = encoder;
     this.recovery = recovery;
+    this.mfa = mfa;
   }
 
   public record Methods(
@@ -43,7 +46,7 @@ public class AccountSecurityService {
         user.getPasswordHash() != null,
         identities.findByUser_IdAndProvider(owner, "google").isPresent(),
         recovery.available() && user.getPasswordHash() != null,
-        false);
+        mfa.settings(owner).available());
   }
 
   private BankUser lock(UUID owner) {

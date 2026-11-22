@@ -183,3 +183,18 @@ returns a generic 202 without tokens. `POST /auth/recovery/reset` accepts
 `{ "token": "...", "password": "..." }`, requires CSRF and returns 204 after
 consuming a valid delivered link and revoking sessions, or controlled 400 on an
 invalid/expired/replayed link. It does not log in. See [recovery details](PASSWORD_RECOVERY.md).
+
+## Optional authenticator MFA
+
+For enrolled profiles, password login returns **202** `{ "mfaRequired": true }`
+instead of a profile. Non-enrolled login remains 200 with its existing body.
+`GET /auth/mfa/status` reports only session-local `{ "required": true/false }`.
+`POST /auth/mfa/challenge` takes `{ "code": "..." }` with CSRF; successful completion
+returns the normal profile and rotates session/CSRF state. Pending identities cannot
+access banking/profile APIs. Refresh CSRF after completion.
+
+Authenticated full-user management endpoints are documented in [MFA](MFA.md):
+`GET /auth/security/mfa` and POST `/auth/security/mfa/enroll`, `/confirm`, `/disable`,
+`/recovery-codes`. Management takes `currentPassword` and, when needed, `code`. Setup
+seeds and new recovery codes are one-time sensitive responses; never log or persist
+them in browser storage. Factor changes sign out sessions.

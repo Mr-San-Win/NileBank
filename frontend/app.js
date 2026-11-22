@@ -1,3 +1,4 @@
+import { createMfa } from "./mfa.js";
 import { createRecovery } from "./recovery.js";
 import { createSavings } from "./savings.js";
 import { createPlanning } from "./planning.js";
@@ -26,6 +27,11 @@ const planning = createPlanning({ api, notify, node, money, getUser: () => state
 const savings = createSavings({ api, notify, node, money, getUser: () => state.user, getAccount: () => state.account, onMoneyChanged: loadAccount });
 
 const recovery = createRecovery({ api, notify, onReset: () => showAuth(), onOpenReset: () => showAuth() });
+
+const mfa = createMfa({ api, notify, node, getUser: () => state.user,
+  onSignedOut: message => { showAuth(); notify(message); },
+  onAuthenticated: async user => { state.user = user; await refreshCsrf(); await showBank(); },
+});
 
 class ApiError extends Error {
   constructor(message, status) {
@@ -190,6 +196,7 @@ function showAuth(message = "") {
   security.reset();
   planning.reset();
   savings.reset();
+  mfa.reset();
   document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
   $("#bank-view").hidden = true;
   $("#auth-view").hidden = false;
@@ -286,7 +293,7 @@ async function navigate(view) {
     await loadHistory();
   }
   if (view === "profile") updateProfile();
-  if (view === "security") await security.open();
+  if (view === "security") { await security.open(); await mfa.open(); }
   if (view === "planning") await planning.open();
   if (view === "savings") await savings.open();
   if (["exchange","partners","finance"].includes(view)) await extensions.open(view);
@@ -447,8 +454,8 @@ function openMoney(mode) {
   $("#money-amount").focus();
 }
 
-$("#login-tab").addEventListener("click", () => authMode("login"));
-$("#register-tab").addEventListener("click", () => authMode("register"));
+$("#login-tab").addEventListener("click", () => { mfa.reset(); recovery.close(); authMode("login"); });
+$("#register-tab").addEventListener("click", () => { mfa.reset(); recovery.close(); authMode("register"); });
 $("#auth-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   setError("#auth-error");
@@ -468,9 +475,11 @@ $("#auth-form").addEventListener("submit", async (event) => {
         $("#password").value = "";
         $("#password").focus();
       } else {
-        state.user = await api("/auth/login", { method: "POST", body });
+        const result = await api("/auth/login", { method: "POST", body });
         $("#password").value = "";
         await refreshCsrf();
+        if (result.mfaRequired) { state.user = null; mfa.challenge(); return; }
+        state.user = result;
         await showBank();
       }
     } catch (error) {
@@ -646,6 +655,8 @@ async function init() {
   try {
     await refreshCsrf();
     if (recovery.hasResetLink()) { recovery.openReset(); return; }
+    const factor = await api("/auth/mfa/status");
+    if (factor.required) { mfa.challenge(); return; }
     try {
       state.user = await api("/auth/me");
     } catch (error) {

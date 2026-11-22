@@ -144,3 +144,12 @@ request response. Reset locks the user and commits password change, token consum
 and session revocation together. Raw links never enter the database or API responses;
 the browser consumes a fragment-only link. See [recovery design](PASSWORD_RECOVERY.md).
 Recovery is default-off and does not add local credentials to Google-only users.
+
+## Multifactor authentication
+
+V17 stores owner-bound AES-GCM authenticator seeds and hashed recovery codes. Both
+primary login paths pass through the same MFA gate. Pending authentication has only
+MFA_PENDING authority; every protected application API requires USER. After verified
+TOTP or a single-use recovery code, the session strategy rotates ID/CSRF and restores
+the original validated UUID authentication. Counters and backup-code consumption are
+serialized by user-row locks. See [MFA](MFA.md) for key lifecycle and limitations.

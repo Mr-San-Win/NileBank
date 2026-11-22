@@ -51,7 +51,9 @@ categories, recurring generation, budgets, expenses, seven-currency wallets, a q
 and exchange, fictional partner linking/movement, history/settings navigation,
 390px mobile overflow checks and logout. It also uses a loopback-only SMTP sink
 to test recovery requests, same-tab reset links, fragment removal, new-password login
-and revocation of an existing session. No real emails are sent. Google is disabled; its protocol is tested
+and revocation of an existing session. It supplies a random in-memory QA encryption
+key and tests authenticator enrollment, OTP replay rejection, pending API denial,
+TOTP login, code replacement/recovery login and factor removal. No real emails are sent. Google is disabled; its protocol is tested
 against a deterministic local signed-token provider in the Maven suite.
 
 The exchange walkthrough intentionally uses the configured real delayed-reference

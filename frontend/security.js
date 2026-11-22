@@ -16,7 +16,7 @@ export function createSecurity({ api, notify, node, onSignedOut }) {
         node("p", "Password: " + (methods.password ? "available" : "not configured")),
         node("p", "Google: " + (methods.google ? "linked" : "not linked")),
         node("p", methods.recoveryAvailable ? "Password recovery: email delivery is configured." : "Password recovery: unavailable for this profile or environment.", "muted"),
-        node("p", "MFA is not available in this version.", "muted"),
+        node("p", "Authenticator settings are shown below. Enrollment depends on this environment and your sign-in methods.", "muted"),
       );
       $("#security-password-fields").disabled = !methods.password;
       $("#security-google-password").disabled = !methods.password;

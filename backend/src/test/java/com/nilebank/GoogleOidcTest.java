@@ -37,6 +37,16 @@ import org.springframework.test.web.servlet.*;
  */
 @SpringBootTest(properties = "nilebank.auth.google.enabled=true")
 class GoogleOidcTest extends PostgresTest {
+  @org.springframework.test.context.DynamicPropertySource
+  static void mfaKeys(org.springframework.test.context.DynamicPropertyRegistry r) {
+    r.add("nilebank.auth.mfa.enabled", () -> true);
+    r.add("nilebank.auth.mfa.active-key-id", () -> "test");
+    r.add("nilebank.auth.mfa.keys-json", () -> "{\"test\":\"" + MfaCryptoTest.TEST_KEY + "\"}");
+  }
+
+  @Autowired com.nilebank.auth.mfa.MfaService mfa;
+  @Autowired AccountSecurityService accountSecurity;
+
   static final ObjectMapper JSON = new ObjectMapper();
   static final String ISSUER = "https://accounts.google.com";
   static final String CLIENT = "nilebank-test-client";
@@ -294,6 +304,39 @@ class GoogleOidcTest extends PostgresTest {
     callback(flow).andExpect(status().isFound()).andExpect(redirectedUrl("/?authError=google"));
     mvc.perform(get("/api/v1/auth/me").session(flow.session)).andExpect(status().isUnauthorized());
     assertThat(identities.findByIssuerAndProviderSubject(ISSUER, flow.fixture.subject)).isEmpty();
+  }
+
+  @Test
+  void realSignedGoogleCallbackCannotBypassEnrolledSecondFactor() throws Exception {
+    String password = "Fictional-MFA-Google-password-2026";
+    var user = auth.register("Google MFA Demo", UUID.randomUUID() + "@example.test", password);
+    var enrollment = mfa.begin(user.id(), password);
+    var codes =
+        mfa.confirm(
+            user.id(),
+            password,
+            com.nilebank.auth.mfa.Totp.code(
+                com.nilebank.auth.mfa.Totp.decode(enrollment.secret()),
+                Instant.now().getEpochSecond() / 30));
+    String subject = UUID.randomUUID().toString();
+    accountSecurity.link(
+        accountSecurity.prepareLink(user.id(), password),
+        ValidatedExternalIdentity.google(ISSUER, subject, user.email(), true, "Provider Name"));
+    var flow = start(subject, user.email());
+    callback(flow).andExpect(status().isFound()).andExpect(redirectedUrl("/"));
+    mvc.perform(get("/api/v1/auth/me").session(flow.session)).andExpect(status().isForbidden());
+    mvc.perform(get("/api/v1/accounts/me").session(flow.session)).andExpect(status().isForbidden());
+    mvc.perform(
+            post("/api/v1/auth/mfa/challenge")
+                .session(flow.session)
+                .with(
+                    org.springframework.security.test.web.servlet.request
+                        .SecurityMockMvcRequestPostProcessors.csrf())
+                .contentType("application/json")
+                .content(JSON.writeValueAsString(Map.of("code", codes.getFirst()))))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(user.id().toString()));
+    mvc.perform(get("/api/v1/auth/me").session(flow.session)).andExpect(status().isOk());
   }
 
   @Test

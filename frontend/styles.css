@@ -1282,3 +1282,6 @@ h3{font-size:14px;letter-spacing:-.2px}.feature-note{background:#edf3ff;border:1
 #fx-wallets { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
 
 .connection-card h3 { overflow-wrap: anywhere; }
+
+.mfa-codes { display: grid; gap: .6rem; margin: 1rem 0; }
+.mfa-codes code, .mfa-setup code { overflow-wrap: anywhere; white-space: normal; word-break: break-all; }

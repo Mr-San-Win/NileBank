@@ -33,3 +33,9 @@ require the operator's decision; this document does not claim legal compliance.
 Google client secrets, database credentials, private keys, dumps and environment files
 belong outside Git. If a secret is exposed, rotate it first and assess affected data;
 rewriting Git history is a separate approved operation. Do not paste secrets in chat.
+
+Optional security data now also includes hashed reset links, encrypted authenticator
+seeds, hashed single-use recovery codes and factor attempt/replay metadata. Raw reset
+links are delivered only by email; setup seeds/codes are shown only during explicit
+setup/replacement. Preserve encryption-key access controls separately from database
+backups. Factor removal deletes authentication metadata, not financial history.

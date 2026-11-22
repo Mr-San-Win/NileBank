@@ -105,6 +105,11 @@
               Sign in to NileBank <span aria-hidden="true">↗</span>
             </button>
           </form>
+          <section id="mfa-challenge-panel" hidden aria-labelledby="mfa-login-heading">
+            <h3 id="mfa-login-heading">Complete your sign-in</h3><p class="field-help">Enter a new authenticator code or one unused recovery code. No banking access is granted before this step.</p>
+            <form id="mfa-challenge-form"><label for="mfa-login-code">Authenticator or recovery code</label><input id="mfa-login-code" autocomplete="one-time-code" maxlength="64" required><button id="mfa-login-submit" type="submit" class="primary full-width">Verify code</button></form>
+            <div id="mfa-challenge-error" class="form-error" role="alert" hidden></div><button id="mfa-login-cancel" class="secondary full-width" type="button">Cancel sign-in</button>
+          </section>
           <button id="forgot-password" class="text-button" type="button" hidden>Forgot your password?</button>
           <section id="recovery-panel" hidden aria-labelledby="recovery-heading">
             <h3 id="recovery-heading">Recover your demo profile</h3>
@@ -403,6 +408,13 @@
       <p class="field-help">At least 12 characters, maximum 72 UTF-8 bytes. All sessions will need to sign in again.</p><button id="security-password-submit" class="primary full-width" type="submit">Change password</button>
     </fieldset></form></section>
   </div>
+<section class="panel form-panel"><h2>Authenticator protection</h2><p id="mfa-status" class="muted">Loading settings…</p>
+<form id="mfa-settings-form"><fieldset id="mfa-fields" disabled><label for="mfa-current-password">Current password</label><input id="mfa-current-password" type="password" autocomplete="current-password" maxlength="72" required>
+<label for="mfa-settings-code">Authenticator or recovery code</label><input id="mfa-settings-code" autocomplete="one-time-code" maxlength="64"><p class="field-help">Changes require your password and a new code, or MFA completed in this session within five minutes. Google-only enrollment is not supported yet.</p>
+<div id="mfa-error" class="form-error" role="alert" hidden></div>
+<button id="mfa-enroll" class="secondary full-width" type="button" disabled>Set up authenticator</button>
+<div id="mfa-setup" class="mfa-setup" hidden><p>Add this setup key to your authenticator app. Do not share it.</p><code id="mfa-secret"></code><p id="mfa-setup-details" class="field-help"></p><button id="mfa-confirm" class="primary full-width" type="button">Confirm enrollment</button></div>
+<button id="mfa-regenerate" class="secondary full-width" type="button" disabled>Replace recovery codes</button><button id="mfa-disable" class="secondary full-width" type="button" disabled>Disable authenticator</button></fieldset></form></section>
 </section>
 <section id="partners-view" class="view" hidden>
   <div class="page-heading"><div><div class="section-kicker">YOUR CONNECTED DEMO WORKSPACE</div><h1>Demo bank connections.</h1><p class="muted">Practice moving THB between NileBank and fictional partner accounts.</p></div><button id="partners-refresh" class="secondary">Refresh ↻</button></div>
@@ -532,5 +544,6 @@
         Confirm transfer ↗
       </button>
     </dialog>
+    <dialog id="mfa-codes-dialog" aria-labelledby="mfa-codes-heading"><h2 id="mfa-codes-heading">Save your recovery codes</h2><p>Each code works once. Store them offline; these codes will not be shown again. Wait for a different authenticator code after enrollment, or use one recovery code to sign in.</p><div id="mfa-codes" class="mfa-codes"></div><button id="mfa-codes-close" type="button" class="primary full-width">I have saved these codes</button></dialog>
   </body>
 </html>

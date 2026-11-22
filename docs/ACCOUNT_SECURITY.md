@@ -4,7 +4,7 @@
 
 `GET /api/v1/auth/security` reports password/Google method availability without
 revealing hashes or subjects. The security settings screen supports password changes,
-explicit Google linking and unlinking. Optional SMTP password recovery is implemented but disabled by default. MFA is not implemented.
+explicit Google linking and unlinking. Optional SMTP password recovery is implemented but disabled by default. Optional TOTP MFA is implemented with encrypted seeds and a pending-login boundary.
 
 `POST /api/v1/auth/security/google/link` requires an authenticated user, CSRF and
 current-password proof. It creates a server-session intent valid for five minutes.
@@ -59,13 +59,14 @@ It does not attach a password to a Google-only user. See [password recovery](PAS
 for configuration, delivery boundaries, concurrency and tests. Real production
 SMTP/inbox delivery remains an operator setup requirement. MFA is not reset by email.
 
-## MFA assessment (not implemented)
+## Authenticator MFA
 
-TOTP fits the monolith, but requires encrypted seed storage/key management, confirmed
-enrollment, hashed recovery codes, replay prevention and enforced pending-authentication
-states across both password and OIDC flows. The current generic authenticated rule
-must never admit a partially verified MFA principal. No partial enrollment or UI claim
-is shipped. MFA remains a release limitation, not a supported feature.
+Optional TOTP enrollment requires an environment-managed encryption key ring. Both
+password and Google login use the same pending-factor gate; protected APIs require
+full USER authority. Seeds are encrypted and recovery codes are hashed and single-use.
+Credential changes revoke sessions. New enrollment currently requires a local password;
+existing enrolled password profiles also require their factor when using linked Google.
+See [MFA design and operations](MFA.md). Email/password reset never removes this factor.
 
 ## Verification
 
@@ -76,3 +77,7 @@ link callbacks, log redaction, rate-limit expiry/spoofing/bounds and all prior r
 
 The optional recovery expansion passed the complete **215-test** suite with zero
 failures/errors/skips, plus actual SMTP/browser reset and old-session revocation.
+
+MFA verification passed the complete **239-test** PostgreSQL-backed suite, including
+a signed Google callback requiring a second factor. See [MFA](MFA.md) for the
+restricted pending principal and enrollment/key-management limitations.

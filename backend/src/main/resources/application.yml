@@ -29,6 +29,10 @@ nilebank:
   fx:
     reference-provider: ${FX_REFERENCE_PROVIDER:cbm}
   auth:
+    mfa:
+      enabled: ${MFA_ENABLED:false}
+      keys-json: ${MFA_KEYS_JSON:}
+      active-key-id: ${MFA_ACTIVE_KEY_ID:}
     recovery:
       enabled: ${RECOVERY_ENABLED:false}
       base-url: ${RECOVERY_BASE_URL:http://localhost:8080}

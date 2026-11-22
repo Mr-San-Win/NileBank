@@ -1,15 +1,15 @@
 # Implementation status
 
-## Local completion checkpoint — 22 November 2026
+## Local completion checkpoint — 23 November 2026
 
 Branch: `feature/nilebank-completion`. Work is local only: no push, merge or public
 deployment is authorized. The original FX-001 implementation and all applied
-V1–V9 migrations were preserved. New migrations are V10–V16.
+V1–V9 migrations were preserved. New migrations are V10–V17.
 
 | Milestone | Status | Verified implementation / remaining limits |
 | --- | --- | --- |
 | AUTH-001 | Implemented | Optional default-off Google OIDC, Spring-managed code flow, PKCE/state/nonce/token validation, UUID identity mapping, collision rejection and concurrent provisioning. Real Google credentials/consent remain external and unverified. |
-| AUTH-002 | Partially implemented | Explicit password-proof linking/unlinking, last-method protection, method settings, password change, database credential-version revocation, redacted security events and bounded per-process IP limits. Default-off SMTP recovery is implemented and locally verified; real delivery and email verification remain external/unimplemented. MFA is not implemented. |
+| AUTH-002 | Implemented with documented limits | Explicit password-proof linking/unlinking, last-method protection, method settings, password change, database credential-version revocation, redacted security events and bounded per-process IP limits. Default-off SMTP recovery and encrypted TOTP MFA are implemented. Both login paths enforce pending-factor authorization. Real SMTP/Google delivery/configuration remains external; email verification and Google-only MFA enrollment are not implemented. |
 | FX-002 | Implemented | Seven wallets, all 42 directions under a complete snapshot, JPY precision, exact settlement, persisted quotes/replay, pinned CBM reference source. ECB intentionally excludes MMK. Rates are delayed official references, not executable market prices. |
 | FIN-001 | Implemented | Owned categories, archival, entry editing/filtering/sorting, monthly budgets/summaries/comparisons, recurring daily/weekly/monthly entries with idempotent bounded generation and documented date policies. Tracker entries never debit simulated funds. |
 | SAVE-001 | Implemented | Up to ten named THB savings accounts, targets/status, atomic IN/OUT, parent-first locking, retry keys and immutable history. No interest; planning goal allocations remain separate. |
@@ -26,6 +26,8 @@ V1–V9 migrations were preserved. New migrations are V10–V16.
 - Production-preparation checkpoint: 194 tests passed, zero failures/errors/skips.
 - Previous final checkpoint: **195 tests passed**, including an untrusted-peer forwarding-header test.
 - Recovery checkpoint: **215 tests passed, zero failures/errors/skips**, including real SMTP transport, TLS failure, token concurrency and session revocation.
+- MFA checkpoint: **239 tests passed, zero failures/errors/skips**, including RFC vectors, encryption/key rotation, concurrent OTP/code consumption, password-recovery bypass prevention and a real signed Google callback requiring MFA.
+- Final Chromium MFA walkthrough passed enrollment, OTP replay rejection, pending API denial, TOTP login, recovery-code replacement/login and secure factor removal.
 - Every frontend JS module passed syntax checks; seven exact currency-format assertions passed.
 - Isolated Chromium: registration/login, account creation, deposit/withdrawal,
   reviewed internal transfer, savings IN/OUT, category/recurrence/budget/expense,
@@ -41,12 +43,14 @@ V1–V9 migrations were preserved. New migrations are V10–V16.
   database-creation or role-creation privileges. ECS structured logging was verified
   from actual production-container output. QA containers were stopped/removed.
 
-## Recovery, MFA and operational blockers
+## External setup and enrollment limitations
 
 Recovery now uses generic asynchronous requests, hashed single-use tokens, real SMTP
 transport and session revocation; production delivery requires external setup. It
-never creates credentials for a Google-only account or links identities by email. MFA needs secure seed storage, pending-auth enforcement and recovery code
-handling; it is explicitly unavailable. Google-only users cannot invent a local
+never creates credentials for a Google-only account or links identities by email. TOTP MFA now has encrypted seeds, pending-only authentication, replay/attempt controls
+and hashed recovery codes. Enrollment requires a local password and operator-managed
+keys. Google-only enrollment, assisted factor recovery and email verification remain
+unimplemented; real provider/hosting setup is external. Google-only users cannot invent a local
 password or unlink their final method. Password proof is currently required to
 initiate explicit linking.
 

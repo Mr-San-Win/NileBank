@@ -14,7 +14,7 @@ def port():
     with socket.socket() as s:
         s.bind(('127.0.0.1', 0))
         return s.getsockname()[1]
-dbport, appport = (port(), port())
+appport = port()
 name = 'nilebank-qa-' + secrets.token_hex(5)
 password = secrets.token_urlsafe(24)
 env = os.environ.copy()
@@ -24,14 +24,17 @@ app = None
 created = False
 log = open(p / '.tools/browser-runtime.log', 'w')
 try:
-    subprocess.run(['docker', 'run', '--rm', '-d', '--name', name, '--label', 'nilebank.qa=isolated', '-e', 'POSTGRES_PASSWORD', '-e', 'POSTGRES_USER=qa', '-e', 'POSTGRES_DB=qa', '-p', f'127.0.0.1:{dbport}:5432', 'postgres:17-alpine'], env=env, check=True, stdout=subprocess.DEVNULL)
+    subprocess.run(['docker', 'run', '--rm', '-d', '--name', name, '--label', 'nilebank.qa=isolated', '-e', 'POSTGRES_PASSWORD', '-e', 'POSTGRES_USER=qa', '-e', 'POSTGRES_DB=qa', '-p', '127.0.0.1:0:5432', 'postgres:17-alpine'], env=env, check=True, stdout=subprocess.DEVNULL)
     created = True
+    dbport = int(subprocess.check_output(['docker', 'port', name, '5432/tcp'], text=True).strip().rsplit(':', 1)[1])
     for _ in range(60):
         if subprocess.run(['docker', 'exec', name, 'pg_isready', '-U', 'qa', '-d', 'qa'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
             break
         time.sleep(1)
     env.update(DB_URL=f'jdbc:postgresql://localhost:{dbport}/qa', DB_USER='qa', DB_PASSWORD=password, SERVER_PORT=str(appport), SERVER_ADDRESS='127.0.0.1', SPRING_PROFILES_ACTIVE='default', GOOGLE_LOGIN_ENABLED='false', COOKIE_SECURE='false', FINANCE_SCHEDULER_ENABLED='false')
     env.update(RECOVERY_ENABLED='true', RECOVERY_BASE_URL=f'http://127.0.0.1:{appport}', RECOVERY_FROM='qa-recovery@example.test', RECOVERY_SMTP_HOST='127.0.0.1', RECOVERY_SMTP_PORT=str(sink.port), RECOVERY_SMTP_STARTTLS='false')
+    import base64
+    env.update(MFA_ENABLED='true', MFA_ACTIVE_KEY_ID='qa', MFA_KEYS_JSON=json.dumps({'qa': base64.b64encode(secrets.token_bytes(32)).decode('ascii')}))
     app = subprocess.Popen(['java', '-jar', str(p / 'backend/target/nilebank-0.1.0.jar')], env=env, stdout=log, stderr=subprocess.STDOUT)
     base = f'http://127.0.0.1:{appport}'
     for _ in range(90):
@@ -201,6 +204,78 @@ try:
         assert not errors, errors
         old_context.close()
         print('PASS browser SMTP recovery, fragment removal, new-password login and old-session revocation', flush=True)
+        page.locator('#email').fill(email)
+        page.locator('#password').fill(replacement)
+        page.locator('#auth-submit').click()
+        expect(page.locator('#bank-view')).to_be_visible()
+        nav('security')
+        expect(page.locator('#mfa-enroll')).to_be_enabled()
+        page.locator('#mfa-current-password').fill(replacement)
+        page.locator('#mfa-enroll').click()
+        expect(page.locator('#mfa-setup')).to_be_visible()
+        seed = page.locator('#mfa-secret').inner_text()
+        assert len(seed) == 32
+        import hmac, hashlib, struct
+
+        def otp(counter):
+            digest = hmac.new(base64.b32decode(seed), struct.pack('>Q', counter), hashlib.sha1).digest()
+            offset = digest[-1] & 15
+            number = int.from_bytes(digest[offset:offset + 4], 'big') & 2147483647
+            return f'{number % 1000000:06d}'
+        counter = int(time.time()) // 30
+        enrollment_code = otp(counter)
+        page.locator('#mfa-current-password').fill(replacement)
+        page.locator('#mfa-settings-code').fill(enrollment_code)
+        page.locator('#mfa-confirm').click()
+        expect(page.locator('#mfa-codes-dialog')).to_be_visible()
+        original_codes = page.locator('#mfa-codes code').all_text_contents()
+        assert len(original_codes) == 8
+        assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth')
+        page.locator('#mfa-codes-close').click()
+        expect(page.locator('#mfa-codes code')).to_have_count(0)
+        page.locator('#email').fill(email)
+        page.locator('#password').fill(replacement)
+        page.locator('#auth-submit').click()
+        expect(page.locator('#mfa-challenge-panel')).to_be_visible()
+        assert page.request.get(base + '/api/v1/accounts/me').status == 403
+        page.locator('#mfa-login-code').fill(enrollment_code)
+        page.locator('#mfa-login-submit').click()
+        expect(page.locator('#mfa-challenge-error')).to_be_visible()
+        page.locator('#mfa-login-code').fill(otp(int(time.time()) // 30 + 1))
+        page.locator('#mfa-login-submit').click()
+        expect(page.locator('#bank-view')).to_be_visible()
+        assert page.locator('#mfa-secret').inner_text() == ''
+        assert page.locator('#mfa-setup-details').inner_text() == ''
+        nav('security')
+        page.locator('#mfa-current-password').fill(replacement)
+        page.locator('#mfa-regenerate').click()
+        expect(page.locator('#mfa-codes-dialog')).to_be_visible()
+        new_codes = page.locator('#mfa-codes code').all_text_contents()
+        assert len(new_codes) == 8 and set(new_codes).isdisjoint(original_codes)
+        page.locator('#mfa-codes-close').click()
+        page.locator('#email').fill(email)
+        page.locator('#password').fill(replacement)
+        page.locator('#auth-submit').click()
+        expect(page.locator('#mfa-challenge-panel')).to_be_visible()
+        page.locator('#mfa-login-code').fill(original_codes[1])
+        page.locator('#mfa-login-submit').click()
+        expect(page.locator('#mfa-challenge-error')).to_be_visible()
+        page.locator('#mfa-login-code').fill(new_codes[0])
+        page.locator('#mfa-login-submit').click()
+        expect(page.locator('#bank-view')).to_be_visible()
+        nav('security')
+        page.locator('#mfa-current-password').fill(replacement)
+        page.locator('#mfa-disable').click()
+        expect(page.locator('#auth-view')).to_be_visible()
+        page.locator('#email').fill(email)
+        page.locator('#password').fill(replacement)
+        page.locator('#auth-submit').click()
+        expect(page.locator('#bank-view')).to_be_visible()
+        expect(page.locator('#mfa-challenge-panel')).not_to_be_visible()
+        page.locator('#logout').click()
+        expect(page.locator('#auth-form')).to_be_visible()
+        assert not errors, errors
+        print('PASS browser MFA enrollment, OTP replay rejection, pending API denial, TOTP login, code replacement/recovery login and secure disable', flush=True)
         browser.close()
 finally:
     if app is not None:

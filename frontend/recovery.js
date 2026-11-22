@@ -29,7 +29,7 @@ export function createRecovery({ api, notify, onReset, onOpenReset }) {
     $("#recovery-heading").textContent = reset ? "Choose a new demo password" : "Recover your demo profile";
     $(reset ? "#reset-password" : "#recovery-email").focus();
   }
-  $("#forgot-password").addEventListener("click", () => open(false));
+  $("#forgot-password").addEventListener("click", () => { onOpenReset(); open(false); });
   $("#recovery-cancel").addEventListener("click", close);
   $("#recovery-form").addEventListener("submit", event => {
     event.preventDefault();
