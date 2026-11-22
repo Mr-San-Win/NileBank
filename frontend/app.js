@@ -1,3 +1,4 @@
+import { createRecovery } from "./recovery.js";
 import { createSavings } from "./savings.js";
 import { createPlanning } from "./planning.js";
 import { configureCurrencies, formatMoney as money } from "./currency.js";
@@ -23,6 +24,8 @@ const security = createSecurity({ api, notify, node, onSignedOut: (message) => {
 const planning = createPlanning({ api, notify, node, money, getUser: () => state.user });
 
 const savings = createSavings({ api, notify, node, money, getUser: () => state.user, getAccount: () => state.account, onMoneyChanged: loadAccount });
+
+const recovery = createRecovery({ api, notify, onReset: () => showAuth(), onOpenReset: () => showAuth() });
 
 class ApiError extends Error {
   constructor(message, status) {
@@ -232,6 +235,7 @@ async function loadAccount() {
   renderAccount();
 }
 async function showBank() {
+  recovery.close();
   clearTimeout(noticeTimer);
   $("#notice").hidden = true;
   $("#auth-view").hidden = true;
@@ -633,6 +637,7 @@ async function init() {
   }
   try {
     const options = await api("/auth/options");
+    recovery.configure(options.recoveryEnabled);
     $("#google-signin").hidden = !options.googleEnabled;
     $("#google-help").hidden = !options.googleEnabled;
   } catch {
@@ -640,6 +645,7 @@ async function init() {
   }
   try {
     await refreshCsrf();
+    if (recovery.hasResetLink()) { recovery.openReset(); return; }
     try {
       state.user = await api("/auth/me");
     } catch (error) {

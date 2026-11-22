@@ -3,6 +3,7 @@ Requires Java 21, Docker, and Playwright/Chromium installed under .tools (see do
 No real Google credentials or existing application database are used.
 """
 import os, sys, subprocess, time, urllib.request, json, secrets, socket
+from local_smtp_sink import LocalSmtpSink
 from pathlib import Path
 p = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(p / '.tools/browser-lib'))
@@ -18,6 +19,7 @@ name = 'nilebank-qa-' + secrets.token_hex(5)
 password = secrets.token_urlsafe(24)
 env = os.environ.copy()
 env.update(POSTGRES_PASSWORD=password)
+sink = LocalSmtpSink()
 app = None
 created = False
 log = open(p / '.tools/browser-runtime.log', 'w')
@@ -29,6 +31,7 @@ try:
             break
         time.sleep(1)
     env.update(DB_URL=f'jdbc:postgresql://localhost:{dbport}/qa', DB_USER='qa', DB_PASSWORD=password, SERVER_PORT=str(appport), SERVER_ADDRESS='127.0.0.1', SPRING_PROFILES_ACTIVE='default', GOOGLE_LOGIN_ENABLED='false', COOKIE_SECURE='false', FINANCE_SCHEDULER_ENABLED='false')
+    env.update(RECOVERY_ENABLED='true', RECOVERY_BASE_URL=f'http://127.0.0.1:{appport}', RECOVERY_FROM='qa-recovery@example.test', RECOVERY_SMTP_HOST='127.0.0.1', RECOVERY_SMTP_PORT=str(sink.port), RECOVERY_SMTP_STARTTLS='false')
     app = subprocess.Popen(['java', '-jar', str(p / 'backend/target/nilebank-0.1.0.jar')], env=env, stdout=log, stderr=subprocess.STDOUT)
     base = f'http://127.0.0.1:{appport}'
     for _ in range(90):
@@ -158,9 +161,46 @@ try:
             nav(view)
             assert page.evaluate('document.documentElement.scrollWidth <= window.innerWidth'), 'Mobile overflow: ' + view
         assert not errors, errors
+        old_context = browser.new_context()
+        old_page = old_context.new_page()
+        old_page.goto(base)
+        old_page.locator('#email').fill(email)
+        old_page.locator('#password').fill(pwtext)
+        old_page.locator('#auth-submit').click()
+        expect(old_page.locator('#bank-view')).to_be_visible()
         page.locator('#logout').click()
         expect(page.locator('#auth-view')).to_be_visible()
         print('PASS browser all navigation, 390px mobile widths, logout; no page errors', flush=True)
+        page.locator('#forgot-password').click()
+        page.locator('#recovery-email').fill(email)
+        page.locator('#recovery-submit').click()
+        for _ in range(150):
+            if any((email in message for message in sink.messages)):
+                break
+            page.wait_for_timeout(100)
+        message = next((message for message in sink.messages if email in message))
+        import re
+        token = re.search('#reset=([A-Za-z0-9_-]{43})', message).group(1)
+        page.goto(base + '/#reset=' + token)
+        expect(page.locator('#reset-form')).to_be_visible()
+        assert '#reset=' not in page.url
+        replacement = 'Fictional-browser-reset-password-2026!'
+        page.locator('#reset-password').fill(replacement)
+        page.locator('#reset-confirm').fill(replacement)
+        page.locator('#reset-submit').click()
+        expect(page.locator('#reset-form')).not_to_be_visible()
+        old_page.reload()
+        expect(old_page.locator('#auth-view')).to_be_visible()
+        expect(old_page.locator('#bank-view')).not_to_be_visible()
+        page.locator('#email').fill(email)
+        page.locator('#password').fill(replacement)
+        page.locator('#auth-submit').click()
+        expect(page.locator('#bank-view')).to_be_visible()
+        page.locator('#logout').click()
+        expect(page.locator('#auth-view')).to_be_visible()
+        assert not errors, errors
+        old_context.close()
+        print('PASS browser SMTP recovery, fragment removal, new-password login and old-session revocation', flush=True)
         browser.close()
 finally:
     if app is not None:
@@ -170,6 +210,7 @@ finally:
         except subprocess.TimeoutExpired:
             app.kill()
             app.wait()
+    sink.close()
     log.close()
     if created:
         subprocess.run(['docker', 'stop', name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

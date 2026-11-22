@@ -22,6 +22,9 @@ public final class PublicEndpoints {
     "/login/oauth2/code/google",
     "/api/v1/auth/register",
     "/api/v1/auth/login",
+    "/recovery.js",
+    "/api/v1/auth/recovery/request",
+    "/api/v1/auth/recovery/reset",
     "/error"
   };
 

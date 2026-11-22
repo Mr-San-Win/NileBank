@@ -21,6 +21,7 @@ checksum/upgrade problems. PostgreSQL 17 is the integration baseline.
 | V13 | Owned categories, recurring rules/occurrences and default-category seeding |
 | V14 | Simulated savings accounts and immutable movements |
 | V15 | Immutable scoped cash retry records |
+| V16 | Hashed expiring password-reset tokens and credential-version binding |
 
 V10 enforces issuer/subject identity uniqueness and one Google binding per user.
 V13 preserves original category codes and existing finance records, backfills owner

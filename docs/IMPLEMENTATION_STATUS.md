@@ -4,12 +4,12 @@
 
 Branch: `feature/nilebank-completion`. Work is local only: no push, merge or public
 deployment is authorized. The original FX-001 implementation and all applied
-V1–V9 migrations were preserved. New migrations are V10–V15.
+V1–V9 migrations were preserved. New migrations are V10–V16.
 
 | Milestone | Status | Verified implementation / remaining limits |
 | --- | --- | --- |
 | AUTH-001 | Implemented | Optional default-off Google OIDC, Spring-managed code flow, PKCE/state/nonce/token validation, UUID identity mapping, collision rejection and concurrent provisioning. Real Google credentials/consent remain external and unverified. |
-| AUTH-002 | Partially implemented | Explicit password-proof linking/unlinking, last-method protection, method settings, password change, database credential-version revocation, redacted security events and bounded per-process IP limits. Recovery/email verification lack verified delivery; MFA is not implemented. |
+| AUTH-002 | Partially implemented | Explicit password-proof linking/unlinking, last-method protection, method settings, password change, database credential-version revocation, redacted security events and bounded per-process IP limits. Default-off SMTP recovery is implemented and locally verified; real delivery and email verification remain external/unimplemented. MFA is not implemented. |
 | FX-002 | Implemented | Seven wallets, all 42 directions under a complete snapshot, JPY precision, exact settlement, persisted quotes/replay, pinned CBM reference source. ECB intentionally excludes MMK. Rates are delayed official references, not executable market prices. |
 | FIN-001 | Implemented | Owned categories, archival, entry editing/filtering/sorting, monthly budgets/summaries/comparisons, recurring daily/weekly/monthly entries with idempotent bounded generation and documented date policies. Tracker entries never debit simulated funds. |
 | SAVE-001 | Implemented | Up to ten named THB savings accounts, targets/status, atomic IN/OUT, parent-first locking, retry keys and immutable history. No interest; planning goal allocations remain separate. |
@@ -24,12 +24,15 @@ V1–V9 migrations were preserved. New migrations are V10–V15.
 - Savings checkpoint: 180 tests passed, zero failures/errors/skips.
 - Banking checkpoint: 186 tests passed, zero failures/errors/skips.
 - Production-preparation checkpoint: 194 tests passed, zero failures/errors/skips.
-- Final verification: **195 tests passed, zero failures/errors/skips**, including a real untrusted socket peer attempting to spoof forwarded HTTPS.
+- Previous final checkpoint: **195 tests passed**, including an untrusted-peer forwarding-header test.
+- Recovery checkpoint: **215 tests passed, zero failures/errors/skips**, including real SMTP transport, TLS failure, token concurrency and session revocation.
 - Every frontend JS module passed syntax checks; seven exact currency-format assertions passed.
 - Isolated Chromium: registration/login, account creation, deposit/withdrawal,
   reviewed internal transfer, savings IN/OUT, category/recurrence/budget/expense,
   real reference quote/execution, fictional partner linking/movement, navigation,
   390px overflow checks and logout passed; no JavaScript page errors.
+- Recovery browser verification passed real local SMTP request/delivery, same-tab
+  fragment capture/removal, password reset, new-password login and old-session revocation.
 - Root Compose image build/start/readiness and HTTP banking smoke passed using
   fresh QA storage, without changing existing demo databases.
 - Custom-format PostgreSQL backup restored to a separate fresh database; audit
@@ -40,9 +43,9 @@ V1–V9 migrations were preserved. New migrations are V10–V15.
 
 ## Recovery, MFA and operational blockers
 
-No recovery endpoint or insecure email shortcut is provided. Recovery requires a
-verified delivery mechanism, hashed short-lived single-use tokens and ownership
-checks. MFA needs secure seed storage, pending-auth enforcement and recovery code
+Recovery now uses generic asynchronous requests, hashed single-use tokens, real SMTP
+transport and session revocation; production delivery requires external setup. It
+never creates credentials for a Google-only account or links identities by email. MFA needs secure seed storage, pending-auth enforcement and recovery code
 handling; it is explicitly unavailable. Google-only users cannot invent a local
 password or unlink their final method. Password proof is currently required to
 initiate explicit linking.

@@ -174,3 +174,12 @@ Deposit and withdrawal accept optional `Idempotency-Key` (8–100 characters).
 The browser supplies it. Same account/operation/key and amount replays the original
 transaction; changed amount returns 409. Missing keys preserve legacy non-idempotent
 behavior. See [banking consistency](BANKING_CONSISTENCY.md).
+
+## Optional password recovery
+
+`GET /auth/options` now also reports `recoveryEnabled`.
+`POST /auth/recovery/request` accepts `{ "email": "..." }`, requires CSRF and
+returns a generic 202 without tokens. `POST /auth/recovery/reset` accepts
+`{ "token": "...", "password": "..." }`, requires CSRF and returns 204 after
+consuming a valid delivered link and revoking sessions, or controlled 400 on an
+invalid/expired/replayed link. It does not log in. See [recovery details](PASSWORD_RECOVERY.md).

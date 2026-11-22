@@ -147,7 +147,12 @@ public class SecurityConfig {
                     .logoutSuccessHandler((req, res, a) -> res.setStatus(204)))
         .headers(
             h ->
-                h.contentSecurityPolicy(
+                h.referrerPolicy(
+                        r ->
+                            r.policy(
+                                org.springframework.security.web.header.writers
+                                    .ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER))
+                    .contentSecurityPolicy(
                         c ->
                             c.policyDirectives(
                                 "default-src 'self'; script-src 'self'; style-src 'self'; img-src"

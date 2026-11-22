@@ -13,6 +13,8 @@ public final class SecurityEvents {
     LOGIN_FAILED,
     PASSWORD_CHANGED,
     GOOGLE_LINKED,
+    RECOVERY_UNAVAILABLE,
+    PASSWORD_RESET,
     GOOGLE_UNLINKED
   }
 

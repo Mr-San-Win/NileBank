@@ -100,7 +100,7 @@ Testcontainers. This includes the existing 97-test foundation plus real Spring O
 callback tests against a local signed-token/JWKS provider. No real Google client,
 public deployment or new browser walkthrough was verified by this test run.
 
-AUTH-002 verification passed **132 tests, 0 failures, 0 errors, 0 skipped** on PostgreSQL 17.11, including account linking, credential revocation and abuse controls. See [account security](docs/ACCOUNT_SECURITY.md) for limits and unavailable recovery/MFA.
+AUTH-002 verification passed **132 tests, 0 failures, 0 errors, 0 skipped** on PostgreSQL 17.11, including account linking, credential revocation and abuse controls. See [account security](docs/ACCOUNT_SECURITY.md) for limits, default-off SMTP recovery and unavailable MFA.
 
 FX-002 verification passed **143 tests, 0 failures, 0 errors, 0 skipped**. The actual default provider fetch also returned all seven currencies. See [currency precision and reference-source policy](docs/CURRENCIES.md).
 
@@ -202,6 +202,12 @@ All paths start with `/api/v1`. See [API documentation](docs/API.md) for bodies,
 | POST | /transfers | Atomic idempotent transfer |
 | GET | /transactions?page=0&size=10 | Own paginated history |
 
+## Optional password recovery
+
+Default-off SMTP recovery uses generic requests and hashed, expiring, single-use links. It preserves Google-only authentication and revokes sessions after reset. Local SMTP and browser tests passed; production inbox delivery remains unverified. [Setup and security details](docs/PASSWORD_RECOVERY.md).
+
+Recovery verification passed **215 tests, 0 failures, 0 errors, 0 skipped**.
+
 ## Deployment preparation
 
 `compose.production.yaml` is a separate private single-host template with the `prod` profile, secure cookies, explicit proxy trust, environment checks, bounded resources and a non-superuser database application role. It still requires an operator-managed HTTPS proxy and external setup. [Read the runbook](docs/DEPLOYMENT.md) before using it. No public deployment has been performed; production readiness is not established.
@@ -212,7 +218,7 @@ Screenshots were captured from the running app using fictional users and persist
 
 ## Limitations and future improvements
 
-One primary THB account with USD/EUR/MMK/SGD/JPY/CNY exchange wallets. JPY uses whole yen; other supported currencies use two decimals. Ordinary withdrawals and account-to-account transfers use THB. No password reset, email verification, MFA, admin UI, or self-service freeze action. Basic per-process authentication rate limiting is implemented; distributed abuse protection still needs a trusted ingress. Frozen state is enforced in the backend and integration tests. Sessions live in application memory and expire on restart. The UI keeps a pending transfer key in tab memory: after a reload or uncertain response, inspect history before starting a fresh transfer. Deposits and withdrawals now accept scoped retry keys; the browser retains one for the same open form. Reloading or opening a new form creates a new key, so inspect history after an uncertain response before starting again. Legacy API calls without keys remain non-idempotent.
+One primary THB account with USD/EUR/MMK/SGD/JPY/CNY exchange wallets. JPY uses whole yen; other supported currencies use two decimals. Ordinary withdrawals and account-to-account transfers use THB. Optional SMTP password reset is implemented and disabled by default; real delivery must be configured and verified. No email verification, MFA, admin UI, or self-service primary-account freeze action. Basic per-process authentication rate limiting is implemented; distributed abuse protection still needs a trusted ingress. Frozen state is enforced in the backend and integration tests. Sessions live in application memory and expire on restart. The UI keeps a pending transfer key in tab memory: after a reload or uncertain response, inspect history before starting a fresh transfer. Deposits and withdrawals now accept scoped retry keys; the browser retains one for the same open form. Reloading or opening a new form creates a new key, so inspect history after an uncertain response before starting again. Legacy API calls without keys remain non-idempotent.
 
 History contains successful financial operations only. The database owner could alter/disable its trigger; it is not an externally tamper-proof ledger. No independent security audit or performance benchmarks have been performed. No public deployment or real payment integrations exist.
 

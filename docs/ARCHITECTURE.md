@@ -135,3 +135,12 @@ structured logs and bounded resources. Owning its schema permits Flyway and also
 means database audit immutability is not protection against that schema owner.
 Staging/public verification, delivery-based recovery, MFA and privacy operations
 remain external or unimplemented as recorded in [implementation status](IMPLEMENTATION_STATUS.md).
+
+## Password recovery
+
+V16 adds hashed, expiring, credential-version-bound reset records. A bounded
+in-memory worker pool performs account lookup and SMTP delivery after a generic
+request response. Reset locks the user and commits password change, token consumption
+and session revocation together. Raw links never enter the database or API responses;
+the browser consumes a fragment-only link. See [recovery design](PASSWORD_RECOVERY.md).
+Recovery is default-off and does not add local credentials to Google-only users.

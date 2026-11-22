@@ -4,7 +4,7 @@
 
 `GET /api/v1/auth/security` reports password/Google method availability without
 revealing hashes or subjects. The security settings screen supports password changes,
-explicit Google linking and unlinking. Recovery and MFA are explicitly unavailable.
+explicit Google linking and unlinking. Optional SMTP password recovery is implemented but disabled by default. MFA is not implemented.
 
 `POST /api/v1/auth/security/google/link` requires an authenticated user, CSRF and
 current-password proof. It creates a server-session intent valid for five minutes.
@@ -51,16 +51,13 @@ class only, not throwable messages/stacks. Hibernate SQL exception DETAIL loggin
 is suppressed because it can contain profile values. Restrict and retain database,
 proxy and application logs deliberately; infrastructure logs require their own review.
 
-## Recovery architecture (not implemented or enabled)
+## Password recovery
 
-No verified email-delivery mechanism is configured, so there is no reset shortcut.
-A future implementation must return generic request responses, use cryptographically
-random 32-byte tokens, persist only SHA-256 token hashes, expire them within a short
-window, consume them once in the password-change transaction, and revoke sessions.
-Only existing password users should qualify; email recovery must not silently attach
-a first password to a Google-only profile. Verify delivery using a local test mail
-sink and an explicitly configured production delivery service. Never expose reset
-links through public API responses or application logs.
+Optional SMTP recovery uses generic asynchronous requests, hashed 15-minute single-use
+links, a per-profile issuance cooldown, CSRF and existing credential-version revocation.
+It does not attach a password to a Google-only user. See [password recovery](PASSWORD_RECOVERY.md)
+for configuration, delivery boundaries, concurrency and tests. Real production
+SMTP/inbox delivery remains an operator setup requirement. MFA is not reset by email.
 
 ## MFA assessment (not implemented)
 
@@ -72,7 +69,10 @@ is shipped. MFA remains a release limitation, not a supported feature.
 
 ## Verification
 
-Full Maven verification passed 132 tests on PostgreSQL 17.11 with V1-V11. Tests cover
+The original account-security checkpoint passed 132 tests on PostgreSQL 17.11 with V1-V11. Tests cover
 proof/CSRF, stale intents, unique and concurrent binding, last-method protection,
 password compatibility, current/other-session revocation, actual signed-provider
 link callbacks, log redaction, rate-limit expiry/spoofing/bounds and all prior regressions.
+
+The optional recovery expansion passed the complete **215-test** suite with zero
+failures/errors/skips, plus actual SMTP/browser reset and old-session revocation.

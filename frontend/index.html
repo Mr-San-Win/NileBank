@@ -105,6 +105,22 @@
               Sign in to NileBank <span aria-hidden="true">↗</span>
             </button>
           </form>
+          <button id="forgot-password" class="text-button" type="button" hidden>Forgot your password?</button>
+          <section id="recovery-panel" hidden aria-labelledby="recovery-heading">
+            <h3 id="recovery-heading">Recover your demo profile</h3>
+            <p class="field-help">Password recovery is for existing password profiles. Google-only profiles must use Google. No funds are involved.</p>
+            <form id="recovery-form">
+              <label for="recovery-email">Profile email</label><input id="recovery-email" type="email" autocomplete="email" maxlength="254" required>
+              <button id="recovery-submit" class="primary full-width" type="submit">Request reset email</button>
+            </form>
+            <form id="reset-form" hidden>
+              <label for="reset-password">New demo password</label><input id="reset-password" type="password" autocomplete="new-password" minlength="12" maxlength="72" required>
+              <label for="reset-confirm">Confirm new password</label><input id="reset-confirm" type="password" autocomplete="new-password" minlength="12" maxlength="72" required>
+              <button id="reset-submit" class="primary full-width" type="submit">Reset password and end old sessions</button>
+            </form>
+            <div id="recovery-error" class="form-error" role="alert" hidden></div>
+            <button id="recovery-cancel" class="secondary full-width" type="button">Back to sign in</button>
+          </section>
           <a id="google-signin" class="secondary full-width google-signin" href="/oauth2/authorization/google" hidden>Continue with Google</a>
           <p id="google-help" class="field-help" hidden>Google shares your name and email. Continuing creates a demo profile if needed. No real funds are involved.</p>
           <p class="auth-disclaimer">

@@ -29,6 +29,15 @@ nilebank:
   fx:
     reference-provider: ${FX_REFERENCE_PROVIDER:cbm}
   auth:
+    recovery:
+      enabled: ${RECOVERY_ENABLED:false}
+      base-url: ${RECOVERY_BASE_URL:http://localhost:8080}
+      from: ${RECOVERY_FROM:}
+      smtp-host: ${RECOVERY_SMTP_HOST:}
+      smtp-port: ${RECOVERY_SMTP_PORT:587}
+      smtp-user: ${RECOVERY_SMTP_USER:}
+      smtp-password: ${RECOVERY_SMTP_PASSWORD:}
+      smtp-starttls: ${RECOVERY_SMTP_STARTTLS:true}
     google:
       enabled: ${GOOGLE_LOGIN_ENABLED:false}
       client-id: ${GOOGLE_CLIENT_ID:}

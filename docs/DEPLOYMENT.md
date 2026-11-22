@@ -144,9 +144,18 @@ approve retention; review database logs separately for PII.
 
 ## Privacy and remaining release gates
 
-Read [privacy/retention policy](PRIVACY.md). Password recovery/email verification and
-MFA are unavailable; do not advertise them. Public users need clear account recovery
+Read [privacy/retention policy](PRIVACY.md). Optional password recovery is default-off and requires verified real SMTP/inbox
+delivery before advertising it. Email verification and MFA are unavailable. Public users need clear account recovery
 limitations, support and a deletion policy. Real Google consent, trusted TLS ingress,
 abuse controls, encrypted off-host backups, operational monitoring and privacy
 handling still require environment verification and ownership. The template and local
 tests do not make this production banking software.
+
+## Optional recovery delivery
+
+Follow [password recovery](PASSWORD_RECOVERY.md) before setting `RECOVERY_ENABLED`.
+The production profile requires a matching canonical HTTPS recovery origin,
+authenticated STARTTLS and certificate verification. Local SMTP/browser tests do not
+prove production inbox delivery. Keep credentials in the protected environment;
+configure sender DNS and mail quotas externally. V16 is additive; existing users and
+financial records are unchanged.
