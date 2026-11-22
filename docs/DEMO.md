@@ -28,4 +28,20 @@ Show the code in TransferService and the PostgreSQL concurrency tests. Explain w
 
 ## Current extensions
 
-See [currency exchange, fictional banks and finance tracking](EXTENSIONS.md) for the new schema, API, transaction guarantees, demonstration steps and limitations. The base account remains THB; foreign wallets support USD/EUR using real daily reference rates. Tracker entries and savings allocations are planning records separate from bank balances.
+See [currency exchange, fictional banks and finance tracking](EXTENSIONS.md) for the new schema, API, transaction guarantees, demonstration steps and limitations. The base account remains THB; foreign wallets support USD/EUR/MMK/SGD/JPY/CNY using real daily reference rates. Tracker entries and savings allocations are planning records separate from bank balances.
+
+## Expanded demonstration
+
+- Savings: create a zero-balance THB savings account, move 100 from main, then 25
+  back. The combined main/savings balance remains unchanged. A goal is optional
+  metadata; planning allocations on the finance screen do not fund this account.
+- Categories and recurring: create an expense category and a monthly schedule
+  starting today. Open finance to materialize the due occurrence; refreshing again
+  does not duplicate it. Explain short-month anchoring and pause/resume policies.
+- Finance: edit a manual entry, filter/sort, set a monthly category budget and
+  inspect the deterministic summary. Explain why this never debits simulated money.
+- Security: inspect available sign-in methods. Password changes invalidate existing
+  sessions. Google is hidden until configured; recovery and MFA are unavailable.
+
+Use [the isolated browser walkthrough](TESTING.md) for reproducible checks without
+changing the existing demo database.

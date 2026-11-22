@@ -14,7 +14,7 @@ Start `docker compose up --build` from the repository root, then open http://loc
 
 Every rates refresh and new quote requests Frankfurter v2 with a pinned CBM snapshot (or optional ECB coverage) over HTTPS: https://api.frankfurter.dev/v2/rates?base=EUR&quotes=THB,USD,MMK,SGD,JPY,CNY&providers=cbm . Documentation: https://frankfurter.dev/ . No user data is sent to this provider.
 
-These are daily reference rates, not executable market prices. A refresh can return the same published rate, especially on weekends or holidays. The interface exposes publication date and retrieval time. Unsupported, malformed, more-than-seven-day-old or unavailable data rejects new quotes with a service-unavailable response. There is no fixed-rate fallback. Existing unexpired quotes retain their agreed rate. Quotes last 120 seconds. Settlement uses the original snapshot ratios and rounds down once to the destination currency's minor unit (two decimals for THB, USD and EUR). No simulated exchange fee is charged.
+These are daily reference rates, not executable market prices. A refresh can return the same published rate, especially on weekends or holidays. The interface exposes publication date and retrieval time. Unsupported, malformed, more-than-seven-day-old or unavailable data rejects new quotes with a service-unavailable response. There is no fixed-rate fallback. Existing unexpired quotes retain their agreed rate. Quotes last 120 seconds. Settlement uses the original snapshot ratios and rounds down once to the destination currency's minor unit (zero decimals for JPY; two for the other six supported currencies). No simulated exchange fee is charged.
 
 ### Quote amounts and approximate display rates
 
@@ -61,9 +61,11 @@ All routes start with `/api/v1`, require authentication, and use the existing CS
 
 ## Verification and limits
 
-The integrated Maven suite passed 56 tests against PostgreSQL with no failures, errors or skips. It covers exchange replay/expiry/ownership/rollback, shared-lock contention, partner replay/conflict/rollback/reconnection, and finance isolation/arithmetic/pagination/concurrent goal allocation, plus the original banking/security tests. Provider parser tests use deterministic fixtures; the separate HTTP smoke script exercises the actual public provider.
+The original extension baseline passed 56 tests. The expanded suite now passes 195 tests against PostgreSQL with no failures, errors or skips. It covers exchange replay/expiry/ownership/rollback, shared-lock contention, partner replay/conflict/rollback/reconnection, and finance isolation/arithmetic/pagination/concurrent goal allocation, plus the original banking/security tests. Provider parser tests use deterministic fixtures; the separate HTTP smoke script exercises the actual public provider.
 
 Run `mvn -f backend/pom.xml clean verify`, then `python3 scripts/smoke_extensions.py` against the running Docker application. The latter requires internet access and creates fictional persisted demo records. Both smoke scripts use only the Python standard library.
+
+For current categories/recurrence, see [personal finance](PERSONAL_FINANCE.md). For actual simulated savings balances, see [savings](SAVINGS.md); these are separate from planning allocations.
 
 No real bank connectors, payments, bank credential storage, automatic transaction categorization, recurring entries, live trading feed or goal withdrawals are implemented. Foreign balances can be exchanged back to THB; ordinary withdrawals and account-to-account transfers remain THB only.
 

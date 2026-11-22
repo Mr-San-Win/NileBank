@@ -13,25 +13,25 @@ flowchart LR
   Services --> JDBC[JdbcTemplate repositories]
   JPA --> DB[(PostgreSQL)]
   JDBC --> DB
-  Flyway[Flyway V1–V9] --> DB
-  Rates[Frankfurter / ECB HTTPS] --> FX[Exchange rate provider]
+  Flyway[Flyway V1–V15] --> DB
+  Rates[Frankfurter / pinned CBM or ECB HTTPS] --> FX[Exchange rate provider]
   FX --> Services
 ```
 
-Feature packages are auth, user, account, transaction, transfer, exchange, partner, finance, config and common. Controllers translate HTTP and validate DTOs. Services enforce ownership, eligibility and monetary rules and define transaction boundaries. Repositories persist records. API responses use DTOs and decimal strings, never password hashes or entity serialization. A single application serves the frontend and APIs, avoiding a separate frontend server and CORS configuration.
+Feature packages are auth, user, account, transaction, transfer, exchange, partner, finance, savings, config and common. Controllers translate HTTP and validate DTOs. Services enforce ownership, eligibility and monetary rules and define transaction boundaries. Repositories persist records. API responses use DTOs and decimal strings, never password hashes or entity serialization. A single application serves the frontend and APIs, avoiding a separate frontend server and CORS configuration.
 
 ## Database model
 
 | Table | Purpose and principal constraints |
 | --- | --- |
-| app_users | UUID, full name, normalized unique email, BCrypt hash, timestamp |
+| app_users | UUID, full name, normalized unique email, optional BCrypt hash, credential version, timestamp |
 | bank_accounts | One unique owner FK, unique generated number, THB, nonnegative numeric(19,2) balance, ACTIVE/FROZEN status, version |
-| banking_transactions | Immutable successful deposit, withdrawal, transfer, exchange and fictional-bank audit records; account FKs, unique reference, currency/counter-amount and shape constraints |
-| currency_wallets | USD/EUR balances uniquely scoped to the parent account, nonnegative fixed-precision amounts |
+| banking_transactions | Immutable successful deposit, withdrawal, transfer, exchange, savings and fictional-bank audit records; account FKs, unique reference, currency/counter-amount and shape constraints |
+| currency_wallets | USD/EUR/MMK/SGD/JPY/CNY balances uniquely scoped to the parent account, nonnegative fixed-precision amounts |
 | exchange_quotes | Owner/account, source and destination currencies, amounts, applied rate, provider/publication/fetch metadata, expiry and executed transaction reference |
 | partner_connections | Allowlisted fictional bank, own parent account, connection state and simulated THB balance; reconnect preserves funds |
 | partner_movements | Account-scoped unique client key, exact request parameters, transaction and original balance snapshots |
-| finance_entries | Owner-scoped manual income/expense amount, category, description and date |
+| finance_entries | Owner-scoped manual or recurring income/expense amount, category, description and date |
 | finance_budgets | Unique owner/month/expense-category limit |
 | savings_goals | Owner, target and bounded saved planning amount |
 
@@ -45,7 +45,7 @@ Cookies are HTTP-only and SameSite=Lax. Secure cookies are configurable for loca
 
 ## Money, transactions and locking
 
-Java BigDecimal and PostgreSQL numeric(19,2) represent balances. Amounts must be positive, within the operation limit and have at most two decimals before persistence. Foreign-exchange settlement retains the original provider ratios, rounding down only at the destination minor unit. Eight-decimal rates are approximate display values; the persisted source and destination amounts define the quote.
+Java BigDecimal and PostgreSQL numeric(19,2) represent balances. Amounts must be positive and within the operation limit; THB uses two decimals and exchange applies currency metadata (JPY zero, other supported currencies two). Foreign-exchange settlement retains the original provider ratios, rounding down only at the destination minor unit. Eight-decimal rates are approximate display values; the persisted source and destination amounts define the quote.
 
 A service transaction groups balances, successful history and retry state. An unchecked business/persistence exception rolls back the whole operation. @Transactional alone does not prevent overspending: every monetary mutation first acquires a pessimistic write lock on its parent bank_accounts row. Ordinary account-to-account transfers lock both account UUIDs in deterministic string order, reducing deadlock risk. Scalar pre-lock account lookups avoid reusing stale managed entities. The version column is an additional safeguard, not the primary concurrency mechanism.
 
@@ -59,7 +59,7 @@ NileBank transfers validate different existing accounts, source ownership, both 
 
 Partner movements similarly compare connection, direction and amount under an account-scoped key and return stored original snapshots. Fictional partner balances and NileBank balances update atomically. Initial simulated funds are granted only once per connection; reconnecting cannot reseed them. Quotes use their persisted UUID as the one-time execution identity.
 
-Deposits/withdrawals and manual tracker additions do not have idempotency keys. After an ambiguous network response, inspect history/entries before retrying them. Client pending keys live in tab memory; after reload, inspect history before beginning a fresh operation.
+Deposits/withdrawals accept optional per-account/operation retry keys; the built-in UI supplies them. Matching requests replay the persisted result, changed amounts conflict, and balance/audit/key records commit together. Manual tracker additions remain non-idempotent; inspect entries after an ambiguous response. Client pending keys live in tab memory; after reload, inspect history before beginning a fresh operation.
 
 ## Foreign exchange flow
 
@@ -118,3 +118,20 @@ one-owner uniqueness. Monetary operations lock parent then child, debit/credit a
 append financial audit plus a parent-scoped retry record in one transaction. Database
 triggers protect both histories. Planning goals stay separate. See
 [savings integrity and APIs](SAVINGS.md).
+
+## Current schema and operational references
+
+V10–V15 add external identities, credential versions, seven-currency constraints,
+owned finance categories and recurring rules/occurrence tombstones, real simulated
+savings accounts/movements and immutable cash retry records. See the complete
+[migration inventory](MIGRATIONS.md). Authentication maps both local and validated
+OIDC principals to the same internal UUID; the banking model is independent of the
+login method. Cash idempotency is scoped separately from internal transfers.
+
+The [production template](DEPLOYMENT.md) remains one Spring Boot service plus
+private PostgreSQL behind an operator-provided trusted HTTPS proxy. It uses a
+non-superuser schema-owning app role, secure cookies, explicit native proxy trust,
+structured logs and bounded resources. Owning its schema permits Flyway and also
+means database audit immutability is not protection against that schema owner.
+Staging/public verification, delivery-based recovery, MFA and privacy operations
+remain external or unimplemented as recorded in [implementation status](IMPLEMENTATION_STATUS.md).

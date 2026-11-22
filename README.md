@@ -86,7 +86,7 @@ python3 scripts/smoke.py
 python3 scripts/smoke_extensions.py
 ```
 
-PowerShell: run `.\mvnw.cmd -B clean verify` inside `backend/`. An installed Maven can run `mvn -f backend/pom.xml clean verify` from the repository root. The smoke scripts require the Docker app to be running and create fictional persisted demo records.
+PowerShell: run `.\mvnw.cmd -B clean verify` inside `backend/`. An installed Maven can run `mvn -f backend/pom.xml clean verify` from the repository root. The smoke scripts require the Docker app to be running and create fictional persisted demo records. For a real Chromium walkthrough using a disposable database, follow [the testing guide](docs/TESTING.md).
 
 Tests include registration, duplicate email, generic login errors, unauthenticated access, ownership, zero accounts, exact monetary validation, deposits/withdrawals, insufficient funds, immutable history, atomic transfers, idempotency replay/conflict, concurrent withdrawals, concurrent duplicate transfers, opposing transfers, mixed operations, CSRF rotation/logout, and a real HTTP session journey.
 
@@ -111,6 +111,8 @@ SAVE-001 verification passed **180 tests, 0 failures, 0 errors, 0 skipped**. See
 BANK-001 verification (22 November 2026) passed **186 tests, 0 failures, 0 errors, 0 skipped**. See [banking retry and consistency rules](docs/BANKING_CONSISTENCY.md).
 
 For host Java development, use an independently running PostgreSQL instance and set `DB_URL`, `DB_USER`, and `DB_PASSWORD` in the process environment, then run `mvn -f backend/pom.xml spring-boot:run`. Spring Boot does not automatically load the Compose `.env` file. Use a fresh empty database so Flyway can create the schema.
+
+Final production-preparation verification passed **195 tests, 0 failures, 0 errors, 0 skipped**, including real Tomcat secure-cookie/proxy tests. The latest isolated browser walkthrough and root/production-template Compose health checks also passed. A PostgreSQL custom-format dump restored into a separate fresh QA database with matching audit-row counts. See [implementation status](docs/IMPLEMENTATION_STATUS.md) for the final checkpoint and verification boundaries.
 
 ## Repository structure
 
@@ -200,6 +202,10 @@ All paths start with `/api/v1`. See [API documentation](docs/API.md) for bodies,
 | POST | /transfers | Atomic idempotent transfer |
 | GET | /transactions?page=0&size=10 | Own paginated history |
 
+## Deployment preparation
+
+`compose.production.yaml` is a separate private single-host template with the `prod` profile, secure cookies, explicit proxy trust, environment checks, bounded resources and a non-superuser database application role. It still requires an operator-managed HTTPS proxy and external setup. [Read the runbook](docs/DEPLOYMENT.md) before using it. No public deployment has been performed; production readiness is not established.
+
 ## Screenshots and demo
 
 Screenshots were captured from the running app using fictional users and persisted simulated transactions. [Currency exchange](docs/screenshots/currency-exchange.png) · [Finance tracker](docs/screenshots/finance-tracker.png). [Mobile dashboard](docs/screenshots/dashboard-mobile.jpg). Follow [DEMO](docs/DEMO.md) for a step-by-step walkthrough.
@@ -214,7 +220,7 @@ Potential improvements: rate limits and authentication abuse monitoring, recover
 
 ## Further reading
 
-[Architecture](docs/ARCHITECTURE.md) · [API](docs/API.md)
+[Architecture](docs/ARCHITECTURE.md) · [API](docs/API.md) · [Testing](docs/TESTING.md) · [Migrations](docs/MIGRATIONS.md) · [Deployment preparation](docs/DEPLOYMENT.md) · [Privacy and limitations](docs/PRIVACY.md) · [Implementation status](docs/IMPLEMENTATION_STATUS.md)
 
 ## Author
 

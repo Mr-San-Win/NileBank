@@ -1,6 +1,6 @@
 # NileBank JSON API
 
-Base: `/api/v1`. Same-origin session cookie authentication. All money is simulated. Base banking uses THB; exchange wallets additionally support USD/EUR. Use fictional data.
+Base: `/api/v1`. Same-origin session cookie authentication. All money is simulated. Base banking uses THB; exchange wallets additionally support USD/EUR/MMK/SGD/JPY/CNY. Use fictional data.
 
 ## CSRF and session lifecycle
 
@@ -98,9 +98,9 @@ Executes a database query; database failure is an error rather than a false heal
 {"status":400,"message":"Please check your input","errors":{"amount":"must be greater than or equal to 0.01"},"timestamp":"<UTC instant>"}
 ```
 
-400 invalid body/parameters/missing header; 401 unauthenticated or invalid credentials; 403 missing/invalid CSRF or denied request; 404 account/resource unavailable; 405 unsupported method; 409 business conflict/duplicate/idempotency mismatch; 415 unsupported media type; 500 unexpected server error. Stack traces are logged server-side and never included in response JSON.
+400 invalid body/parameters/missing header; 401 unauthenticated or invalid credentials; 403 missing/invalid CSRF or denied request; 404 account/resource unavailable; 405 unsupported method; 409 business conflict/duplicate/idempotency mismatch; 415 unsupported media type; 500 unexpected server error. Unexpected API errors log the exception class without response stack traces or internal details.
 
-On 403, fetch a new CSRF token before submitting again. Do not automatically retry deposit/withdrawal after a lost response; check history. Transfers can be safely retried with their original key and exact parameters.
+On 403, fetch a new CSRF token before submitting again. Retry deposit/withdrawal only with the original key and exact amount; otherwise check history before a new operation. Transfers can be safely retried with their original key and exact parameters.
 
 
 
@@ -111,7 +111,7 @@ See [currency exchange, fictional banks and finance tracking](EXTENSIONS.md) for
 
 ### Exchange quote precision
 
-`POST /api/v1/exchange/quotes` retains the existing JSON contract. Monetary response values remain decimal strings. `amount` and `receivedAmount` are the binding persisted terms. `rate` remains an eight-decimal string and is an approximate display rate; clients must not reconstruct settlement from it. `notice` explains the distinction. `POST /exchange/quotes/{id}/execute` uses the stored amount and returns the original result on matching replay, without repricing from a provider refresh. The received amount rounds down once at the destination minor unit; THB, USD and EUR all currently use two decimals. No exchange fee is applied.
+`POST /api/v1/exchange/quotes` retains the existing JSON contract. Monetary response values remain decimal strings. `amount` and `receivedAmount` are the binding persisted terms. `rate` remains an eight-decimal string and is an approximate display rate; clients must not reconstruct settlement from it. `notice` explains the distinction. `POST /exchange/quotes/{id}/execute` uses the stored amount and returns the original result on matching replay, without repricing from a provider refresh. The received amount rounds down once at the destination minor unit; JPY uses zero decimals; THB, USD, EUR, MMK, SGD and CNY use two decimals. No exchange fee is applied.
 
 ## Optional Google authentication
 
