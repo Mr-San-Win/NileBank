@@ -1,7 +1,9 @@
 # Render Free + Neon PostgreSQL
 
 This is a low-traffic educational demo deployment, not a production banking service.
-Use the existing Docker build from the repository root. Neon stores persistent data;
+The recommended path is the prebuilt image from GitHub Actions; the source-build
+form below is retained as a reference, but it is blocked when Render builders
+receive Maven Central 429 responses. Neon stores persistent data;
 Render's container filesystem and in-memory sessions are ephemeral. Sleeping/restarts
 log users out; scheduled finance catch-up resumes when the application is awake.
 Never use Render's expiring free PostgreSQL for durable demo data.
@@ -133,3 +135,60 @@ Sources: [Neon password policy](https://neon.com/docs/security/security-overview
 Bootstrap compatibility follow-up: full clean Maven verification passed with
 **265 tests, zero failures/errors/skips**, including the managed-credential boundary
 and automatic platform URL tests. No dependencies or migrations changed.
+
+## Prebuilt image delivery (recommended after repeated Maven Central 429)
+
+Do not keep retrying the rate-limited Render Maven build, clear its cache, change
+Spring Boot versions or disable TLS. GitHub Actions uses its Maven dependency
+cache, runs the full verification suite, packages the frontend in the JAR and
+builds/tests a runtime-only image. The runtime Docker build does not run Maven.
+The separate publish job runs only after successful verification on main (push
+or manually dispatched main workflow), with package-write permission limited to
+that job. Pull requests never publish images or receive registry credentials.
+The existing multistage Dockerfile remains available for local source builds.
+
+After merging this workflow, wait for both verify and publish jobs to succeed.
+The expected package is `ghcr.io/mr-san-win/nilebank`; confirm its actual output
+and SHA tag/digest before use. A newly published GHCR package may be private.
+In GitHub's package settings, the owner must deliberately make this educational
+application image Public before anonymous Render pulls work. Do not create or
+paste a personal access token as a shortcut. The image contains only the runtime
+and packaged application, not source caches, .env files, database contents or
+runtime credentials. Review the image/package before changing visibility.
+
+In Render, choose Existing Image for a new service, or inspect the existing
+service's source settings for a supported switch. Do not delete the existing
+service or create a replacement automatically. Switching backing sources can
+trigger a deployment, so do this only when ready. Use the verified image digest
+`ghcr.io/mr-san-win/nilebank@sha256:ACTUAL_DIGEST_FROM_PUBLISH` rather than guessing a
+digest or silently tracking mutable main. If the dashboard does not support a
+source-type switch, create a separate Free image-backed service manually, retain
+the failed service until verification, and copy private environment settings
+directly between Render editors without exposing them.
+
+Keep the same Singapore region, Free plan, health path and environment variables.
+No Root Directory, Dockerfile Path or Maven build command is needed for an
+image-backed service. APP_PUBLIC_URL remains absent: Render's assigned HTTPS URL
+is automatic. Actual registry publication, visibility and Render startup must be
+verified externally; local image tests alone do not establish deployment success.
+
+Reproduce the runtime-only packaging from a successfully verified JAR:
+
+```sh
+mkdir -p .tools/release-image
+cp backend/target/nilebank-0.1.0.jar .tools/release-image/
+docker build -f backend/Dockerfile.runtime -t nilebank:render-local .tools/release-image
+python3 scripts/verify_render.py
+```
+
+This eliminates dependency downloads from Render's deployment path and avoids
+rebuilding the application after tests. It is not a guarantee that all external
+registries or GitHub build downloads can never fail. No deploy hook, cloud API
+credential or automatic public deployment is added.
+
+Runtime-only delivery local validation: official actionlint v1.7.12 passed;
+Docker image build and the isolated 512 MB HTTPS banking smoke passed, including
+all 18 migrations. Sample memory was 271.8 MiB (not a peak benchmark). Java source,
+dependencies and migrations are unchanged; the last full Maven run had 265 passing
+tests. The new workflow itself still requires a real GitHub run; registry publication
+and anonymous pulls are not claimed as verified until that succeeds.
