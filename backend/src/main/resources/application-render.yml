@@ -1,3 +1,6 @@
+# Render provides its own canonical HTTPS URL on first deployment.
+# A manually supplied APP_PUBLIC_URL overrides this for a custom domain.
+APP_PUBLIC_URL: ${RENDER_EXTERNAL_URL:}
 # Render terminates public TLS and redirects HTTP at its edge.
 # Never use this profile on a directly exposed HTTP server.
 server:

@@ -16,7 +16,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
     properties = {
-      "APP_PUBLIC_URL=https://demo.example.test",
+      "RENDER_EXTERNAL_URL=https://demo.example.test",
       "nilebank.auth.google.enabled=false",
       "nilebank.finance.scheduler-enabled=false"
     })
@@ -43,6 +43,7 @@ class RenderHttpTest {
   @Test
   void renderIncludesProductionValidationAndBoundedConnectionPool() {
     assertThat(environment.getActiveProfiles()).contains("render");
+    assertThat(environment.getProperty("APP_PUBLIC_URL")).isEqualTo("https://demo.example.test");
     assertThat(environment.getProperty("server.servlet.session.cookie.secure")).isEqualTo("true");
     assertThatCode(() -> com.nilebank.config.ProductionConfig.validate(environment))
         .doesNotThrowAnyException();

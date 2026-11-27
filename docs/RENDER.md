@@ -25,10 +25,10 @@ screenshot, paste into chat or put credentials in the JDBC URL.
 | Key | Value |
 | --- | --- |
 | `SPRING_PROFILES_ACTIVE` | `render` |
-| `APP_PUBLIC_URL` | Actual canonical HTTPS service origin, e.g. `https://nilebank-demo.onrender.com`; confirm assigned hostname before login testing |
+| `APP_PUBLIC_URL` | Omit for first deployment: Render automatically supplies `RENDER_EXTERNAL_URL`, which the profile uses. Set explicitly only for a verified custom domain. |
 | `DB_URL` | `jdbc:postgresql://DIRECT_NEON_HOST:5432/nilebank?sslmode=verify-full&sslfactory=org.postgresql.ssl.DefaultJavaSSLFactory` |
 | `DB_USER` | The selected Neon database role, currently `nilebank_owner` |
-| `DB_PASSWORD` | Its private password; production validation requires at least 24 characters. If shorter, reset the role password in Neon first and update every intended client |
+| `DB_PASSWORD` | Its private provider-generated password. Render accepts at least 16 characters only for a Neon hostname with verify-full and Java certificate validation; other deployment configurations retain the 24-character policy. Never paste it into chat. |
 | `JAVA_TOOL_OPTIONS` | `-Xms64m -Xmx256m -XX:MaxMetaspaceSize=128m -XX:ReservedCodeCacheSize=48m -Xss512k -XX:ActiveProcessorCount=1 -XX:+ExitOnOutOfMemoryError` |
 | `GOOGLE_LOGIN_ENABLED` | `false` |
 | `GOOGLE_REAUTH_ENABLED` | `false` |
@@ -39,7 +39,9 @@ screenshot, paste into chat or put credentials in the JDBC URL.
 The Render profile reads Render's automatic `PORT` (default 10000); do not create
 PORT manually. It applies the existing production validation, so secure cookies, canonical
 HTTPS validation and structured logging remain enabled. No TRUSTED_PROXY_REGEX
-variable is needed for this profile.
+variable is needed for this profile. Remove the APP_PUBLIC_URL environment row
+entirely for the automatic URL; an explicitly empty value overrides the fallback
+and is correctly rejected.
 
 In Neon Connect, turn **Connection pooling off** to obtain the direct hostname
 (without `-pooler`). Keep the production branch and `nilebank` database selected.
@@ -120,3 +122,14 @@ Final clean Maven verification passed: **261 tests, zero failures/errors/skips**
 (including three new Render HTTP/profile tests on PostgreSQL 17). Both production
 and Render HTTP suites also passed in isolation. A prior run encountered a transient
 container database connection refusal; no test was removed or weakened.
+
+Neon enforces password entropy upstream; the narrow Render/verified-Neon exception
+accepts provider-generated credentials without inventing a new password format.
+Never edit or pad the issued password. If exposed, rotate in Neon and update Render.
+An explicit APP_PUBLIC_URL still takes precedence over the platform-supplied URL.
+Sources: [Neon password policy](https://neon.com/docs/security/security-overview),
+[Render platform URL](https://render.com/docs/environment-variables).
+
+Bootstrap compatibility follow-up: full clean Maven verification passed with
+**265 tests, zero failures/errors/skips**, including the managed-credential boundary
+and automatic platform URL tests. No dependencies or migrations changed.

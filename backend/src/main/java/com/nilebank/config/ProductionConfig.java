@@ -17,8 +17,10 @@ public class ProductionConfig {
 
   public static void validate(Environment env) {
     String password = env.getProperty("spring.datasource.password", "");
+    int minimumLength = managedNeonOnRender(env) ? 16 : 24;
     require(
-        password.length() >= 24 && !password.toLowerCase(java.util.Locale.ROOT).contains("replace"),
+        password.length() >= minimumLength
+            && !password.toLowerCase(java.util.Locale.ROOT).contains("replace"),
         "A strong deployment database password is required");
     require(
         !"postgres".equalsIgnoreCase(env.getProperty("spring.datasource.username", "")),
@@ -64,6 +66,38 @@ public class ProductionConfig {
           !env.getProperty("nilebank.auth.google.client-id", "").isBlank()
               && !env.getProperty("nilebank.auth.google.client-secret", "").isBlank(),
           "Google client configuration is required when enabled");
+    }
+  }
+
+  /**
+   * Neon enforces provider-side password entropy. Only permit its shorter generated credentials on
+   * Render with a hostname-verified JDBC connection.
+   */
+  private static boolean managedNeonOnRender(Environment env) {
+    if (!env.acceptsProfiles(org.springframework.core.env.Profiles.of("render"))) return false;
+    String jdbc = env.getProperty("spring.datasource.url", "");
+    if (!jdbc.startsWith("jdbc:postgresql://")) return false;
+    try {
+      URI uri = URI.create(jdbc.substring(5));
+      if (uri.getHost() == null
+          || !uri.getHost().endsWith(".neon.tech")
+          || uri.getUserInfo() != null
+          || uri.getFragment() != null) return false;
+      java.util.Map<String, String> parameters = new java.util.HashMap<>();
+      for (String parameter :
+          java.util.Objects.requireNonNullElse(uri.getRawQuery(), "").split("&")) {
+        String[] pair = parameter.split("=", 2);
+        String key = java.net.URLDecoder.decode(pair[0], java.nio.charset.StandardCharsets.UTF_8);
+        String value =
+            pair.length == 2
+                ? java.net.URLDecoder.decode(pair[1], java.nio.charset.StandardCharsets.UTF_8)
+                : "";
+        if (parameters.putIfAbsent(key, value) != null) return false;
+      }
+      return "verify-full".equals(parameters.get("sslmode"))
+          && "org.postgresql.ssl.DefaultJavaSSLFactory".equals(parameters.get("sslfactory"));
+    } catch (IllegalArgumentException invalid) {
+      return false;
     }
   }
 
