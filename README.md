@@ -257,3 +257,5 @@ Software Engineering Student — KMITL, Thailand
 
 
 Operational preparation: [HTTPS, encrypted backups and health checks](docs/OPERATIONS.md).
+
+Free demo hosting: [Render + Neon setup](docs/RENDER.md).

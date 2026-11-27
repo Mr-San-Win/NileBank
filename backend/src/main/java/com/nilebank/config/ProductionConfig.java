@@ -8,7 +8,7 @@ import org.springframework.core.env.Environment;
 
 /** Fail before datasource/migration beans initialize when public deployment settings are unsafe. */
 @Configuration(proxyBeanMethods = false)
-@Profile("prod")
+@Profile({"prod", "render"})
 public class ProductionConfig {
   @Bean
   static BeanFactoryPostProcessor productionSettings(Environment environment) {

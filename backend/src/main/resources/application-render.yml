@@ -1,0 +1,36 @@
+# Render terminates public TLS and redirects HTTP at its edge.
+# Never use this profile on a directly exposed HTTP server.
+server:
+  shutdown: graceful
+  forward-headers-strategy: native
+  servlet:
+    session:
+      cookie:
+        secure: true
+  address: 0.0.0.0
+  port: ${PORT:10000}
+  tomcat:
+    redirect-context-root: false
+    threads:
+      max: 24
+      min-spare: 2
+    max-connections: 100
+    accept-count: 20
+    remoteip:
+      # Until actual ingress peers are verified, trust no forwarded client IP.
+      internal-proxies: '^$'
+      trusted-proxies: '^$'
+spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+  datasource:
+    hikari:
+      maximum-pool-size: 3
+      minimum-idle: 0
+      idle-timeout: 60000
+      connection-timeout: 15000
+      initialization-fail-timeout: 60000
+logging:
+  structured:
+    format:
+      console: ecs
