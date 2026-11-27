@@ -96,4 +96,63 @@ class ProductionConfigTest {
         .withProperty("nilebank.auth.google.client-secret", "fictional-test-only");
     assertThatCode(() -> ProductionConfig.validate(env)).doesNotThrowAnyException();
   }
+
+  private MockEnvironment managedNeon() {
+    MockEnvironment env =
+        valid()
+            .withProperty("spring.datasource.password", "Fictional-Test16!")
+            .withProperty(
+                "spring.datasource.url",
+                "jdbc:postgresql://ep-fictional.example.neon.tech/nilebank?sslmode=verify-full&sslfactory=org.postgresql.ssl.DefaultJavaSSLFactory");
+    env.setActiveProfiles("render");
+    return env;
+  }
+
+  @Test
+  void renderAcceptsManagedNeonCredentialsWithVerifiedTls() {
+    assertThatCode(() -> ProductionConfig.validate(managedNeon())).doesNotThrowAnyException();
+  }
+
+  @Test
+  void managedNeonStillRejectsShortOrPlaceholderCredentialsWithoutEchoingThem() {
+    for (String password : new String[] {"", "fictional-short", "replace-this-value"})
+      assertThatThrownBy(
+              () ->
+                  ProductionConfig.validate(
+                      managedNeon().withProperty("spring.datasource.password", password)))
+          .isInstanceOf(IllegalStateException.class)
+          .hasMessage("A strong deployment database password is required");
+  }
+
+  @Test
+  void otherProfilesRetainTwentyFourCharacterPolicy() {
+    var env = managedNeon();
+    env.setActiveProfiles("prod");
+    assertThatThrownBy(() -> ProductionConfig.validate(env))
+        .isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  void managedCredentialExceptionCannotUseUnverifiedOrLookalikeHosts() {
+    String url = managedNeon().getProperty("spring.datasource.url");
+    for (String invalid :
+        new String[] {
+          url.replace(".neon.tech/", ".neon.tech.evil.example/"),
+          url.replace("verify-full", "require"),
+          url.replace(
+              "sslfactory=org.postgresql.ssl.DefaultJavaSSLFactory",
+              "sslfactory=org.postgresql.ssl.NonValidatingFactory"),
+          url + "&sslmode=require",
+          url + "&sslmode=verify-full",
+          url + "#private",
+          url.replace("//ep-", "//user:private@ep-"),
+          url + "&bad=%XX"
+        })
+      assertThatThrownBy(
+              () ->
+                  ProductionConfig.validate(
+                      managedNeon().withProperty("spring.datasource.url", invalid)))
+          .isInstanceOf(IllegalStateException.class)
+          .hasMessageNotContaining("private");
+  }
 }
