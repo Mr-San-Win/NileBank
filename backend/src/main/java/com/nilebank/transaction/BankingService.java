@@ -11,32 +11,70 @@ import org.springframework.transaction.annotation.Transactional;
 public class BankingService {
   private final AccountService accounts;
   private final TransactionRepository transactions;
+  private final CashRequestRepository requests;
+  private final jakarta.persistence.EntityManager entities;
 
-  public BankingService(AccountService accounts, TransactionRepository transactions) {
+  public BankingService(
+      AccountService accounts,
+      TransactionRepository transactions,
+      CashRequestRepository requests,
+      jakarta.persistence.EntityManager entities) {
     this.accounts = accounts;
     this.transactions = transactions;
+    this.requests = requests;
+    this.entities = entities;
   }
 
   @Transactional
   public TransactionView deposit(UUID owner, UUID accountId, BigDecimal amount) {
-    amount = Money.validate(amount);
-    BankAccount account = accounts.lockOwned(owner, accountId);
-    account.credit(amount);
-    return TransactionView.of(
-        transactions.save(
-            new BankingTransaction(BankingTransaction.Type.DEPOSIT, amount, null, account)),
-        accountId);
+    return cash(owner, accountId, amount, null, BankingTransaction.Type.DEPOSIT);
+  }
+
+  @Transactional
+  public TransactionView deposit(UUID owner, UUID accountId, BigDecimal amount, String key) {
+    return cash(owner, accountId, amount, key, BankingTransaction.Type.DEPOSIT);
   }
 
   @Transactional
   public TransactionView withdraw(UUID owner, UUID accountId, BigDecimal amount) {
+    return cash(owner, accountId, amount, null, BankingTransaction.Type.WITHDRAWAL);
+  }
+
+  @Transactional
+  public TransactionView withdraw(UUID owner, UUID accountId, BigDecimal amount, String key) {
+    return cash(owner, accountId, amount, key, BankingTransaction.Type.WITHDRAWAL);
+  }
+
+  private TransactionView cash(
+      UUID owner, UUID accountId, BigDecimal amount, String key, BankingTransaction.Type type) {
     amount = Money.validate(amount);
+    if (key != null && (key.length() < 8 || key.length() > 100 || key.isBlank()))
+      throw new com.nilebank.common.ApiException(
+          org.springframework.http.HttpStatus.BAD_REQUEST,
+          "Idempotency key must contain 8 to 100 characters");
     BankAccount account = accounts.lockOwned(owner, accountId);
-    account.debit(amount);
-    return TransactionView.of(
-        transactions.save(
-            new BankingTransaction(BankingTransaction.Type.WITHDRAWAL, amount, account, null)),
-        accountId);
+    if (key != null) {
+      var prior = requests.prior(accountId, type, key);
+      if (prior.isPresent()) {
+        if (prior.get().amount().compareTo(amount) != 0)
+          throw new com.nilebank.common.ApiException(
+              org.springframework.http.HttpStatus.CONFLICT,
+              "Idempotency key was used with different parameters");
+        return TransactionView.of(
+            transactions.findById(prior.get().transactionId()).orElseThrow(), accountId);
+      }
+    }
+    boolean deposit = type == BankingTransaction.Type.DEPOSIT;
+    if (deposit) account.credit(amount);
+    else account.debit(amount);
+    var transaction =
+        transactions.saveAndFlush(
+            new BankingTransaction(
+                type, amount, deposit ? null : account, deposit ? account : null));
+    // Return database precision on the first response as well as on replay.
+    entities.refresh(transaction);
+    if (key != null) requests.record(accountId, type, key, amount, transaction.getId());
+    return TransactionView.of(transaction, accountId);
   }
 
   public record History(

@@ -1,17 +1,25 @@
 package com.nilebank.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nilebank.auth.AuthService;
+import com.nilebank.auth.*;
 import com.nilebank.common.ApiError;
 import com.nilebank.user.UserRepository;
 import java.util.List;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.*;
 import org.springframework.security.authentication.*;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.ObjectPostProcessor;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.userdetails.*;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
+import org.springframework.security.oauth2.client.web.HttpSessionOAuth2AuthorizedClientRepository;
+import org.springframework.security.oauth2.client.web.OAuth2LoginAuthenticationFilter;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.web.*;
 import org.springframework.security.web.authentication.session.*;
 import org.springframework.security.web.context.*;
@@ -29,12 +37,11 @@ public class SecurityConfig {
     return email ->
         users
             .findByEmail(AuthService.normalize(email))
+            .filter(u -> u.getPasswordHash() != null)
             .map(
                 u ->
-                    User.withUsername(u.getId().toString())
-                        .password(u.getPasswordHash())
-                        .roles("USER")
-                        .build())
+                    new LocalUserPrincipal(
+                        u.getId(), u.getPasswordHash(), u.getCredentialVersion()))
             .orElseThrow(() -> new UsernameNotFoundException("Invalid credentials"));
   }
 
@@ -69,27 +76,63 @@ public class SecurityConfig {
       HttpSecurity http,
       SecurityContextRepository contexts,
       CsrfTokenRepository csrfTokens,
-      ObjectMapper json)
+      ObjectMapper json,
+      UserRepository users,
+      OidcIdentityMapper oidcMapper,
+      SessionAuthenticationStrategy loginSessions,
+      ObjectProvider<ClientRegistrationRepository> registrations,
+      ObjectProvider<OAuth2UserService<OidcUserRequest, OidcUser>> oidcUsers)
       throws Exception {
+    if (registrations.getIfAvailable() != null) {
+      http.oauth2Login(
+          oauth ->
+              oauth
+                  .clientRegistrationRepository(registrations.getObject())
+                  .authorizedClientRepository(new HttpSessionOAuth2AuthorizedClientRepository())
+                  .authorizationEndpoint(
+                      endpoint ->
+                          endpoint.authorizationRequestResolver(
+                              new LinkAuthorizationRequestResolver(registrations.getObject())))
+                  .userInfoEndpoint(info -> info.oidcUserService(oidcUsers.getObject()))
+                  .withObjectPostProcessor(
+                      new ObjectPostProcessor<OAuth2LoginAuthenticationFilter>() {
+                        @Override
+                        public <O extends OAuth2LoginAuthenticationFilter> O postProcess(O filter) {
+                          filter.setAuthenticationResultConverter(oidcMapper);
+                          return filter;
+                        }
+                      })
+                  .successHandler(
+                      (request, response, authentication) -> {
+                        SecurityEvents.record(
+                            com.nilebank.auth.mfa.MfaService.pending(authentication)
+                                ? SecurityEvents.Event.MFA_REQUIRED
+                                : SecurityEvents.Event.LOGIN,
+                            java.util.UUID.fromString(authentication.getName()));
+                        var primary =
+                            com.nilebank.auth.mfa.MfaService.pending(authentication)
+                                ? com.nilebank.auth.mfa.MfaService.pendingState(authentication)
+                                    .original()
+                                : authentication;
+                        response.sendRedirect(
+                            GoogleReauthentication.proof(primary) != null
+                                ? "/?security=verified"
+                                : "/");
+                      })
+                  .failureHandler(
+                      (request, response, exception) -> {
+                        SecurityEvents.record(SecurityEvents.Event.LOGIN_FAILED, null);
+                        response.sendRedirect("/?authError=google");
+                      }));
+    }
+    http.addFilterAfter(
+        new CredentialVersionFilter(users, json), SecurityContextHolderFilter.class);
+    http.addFilterBefore(new AuthenticationRateLimitFilter(json), CsrfFilter.class);
+    http.sessionManagement(session -> session.sessionAuthenticationStrategy(loginSessions));
     http.securityContext(c -> c.securityContextRepository(contexts))
         .csrf(c -> c.csrfTokenRepository(csrfTokens))
         .authorizeHttpRequests(
-            a ->
-                a.requestMatchers(
-                        "/",
-                        "/index.html",
-                        "/styles.css",
-                        "/app.js",
-                        "/extensions.js",
-                        "/favicon.ico",
-                        "/api/v1/health",
-                        "/api/v1/auth/csrf",
-                        "/api/v1/auth/register",
-                        "/api/v1/auth/login",
-                        "/error")
-                    .permitAll()
-                    .anyRequest()
-                    .authenticated())
+            a -> a.requestMatchers(PublicEndpoints.PATHS).permitAll().anyRequest().hasRole("USER"))
         .exceptionHandling(
             e ->
                 e.authenticationEntryPoint(
@@ -114,7 +157,12 @@ public class SecurityConfig {
                     .logoutSuccessHandler((req, res, a) -> res.setStatus(204)))
         .headers(
             h ->
-                h.contentSecurityPolicy(
+                h.referrerPolicy(
+                        r ->
+                            r.policy(
+                                org.springframework.security.web.header.writers
+                                    .ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER))
+                    .contentSecurityPolicy(
                         c ->
                             c.policyDirectives(
                                 "default-src 'self'; script-src 'self'; style-src 'self'; img-src"

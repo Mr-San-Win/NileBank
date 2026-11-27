@@ -85,7 +85,7 @@ public class ExceptionHandlerAdvice {
 
   @ExceptionHandler(Exception.class)
   ResponseEntity<ApiError> unexpected(Exception e) {
-    log.error("Unexpected request failure", e);
+    log.error("Unexpected request failure type={}", e.getClass().getSimpleName());
     return ResponseEntity.internalServerError()
         .body(ApiError.of(500, "An unexpected error occurred"));
   }

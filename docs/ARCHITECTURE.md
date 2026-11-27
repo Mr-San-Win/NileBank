@@ -13,25 +13,25 @@ flowchart LR
   Services --> JDBC[JdbcTemplate repositories]
   JPA --> DB[(PostgreSQL)]
   JDBC --> DB
-  Flyway[Flyway V1–V9] --> DB
-  Rates[Frankfurter / ECB HTTPS] --> FX[Exchange rate provider]
+  Flyway[Flyway V1–V15] --> DB
+  Rates[Frankfurter / pinned CBM or ECB HTTPS] --> FX[Exchange rate provider]
   FX --> Services
 ```
 
-Feature packages are auth, user, account, transaction, transfer, exchange, partner, finance, config and common. Controllers translate HTTP and validate DTOs. Services enforce ownership, eligibility and monetary rules and define transaction boundaries. Repositories persist records. API responses use DTOs and decimal strings, never password hashes or entity serialization. A single application serves the frontend and APIs, avoiding a separate frontend server and CORS configuration.
+Feature packages are auth, user, account, transaction, transfer, exchange, partner, finance, savings, config and common. Controllers translate HTTP and validate DTOs. Services enforce ownership, eligibility and monetary rules and define transaction boundaries. Repositories persist records. API responses use DTOs and decimal strings, never password hashes or entity serialization. A single application serves the frontend and APIs, avoiding a separate frontend server and CORS configuration.
 
 ## Database model
 
 | Table | Purpose and principal constraints |
 | --- | --- |
-| app_users | UUID, full name, normalized unique email, BCrypt hash, timestamp |
+| app_users | UUID, full name, normalized unique email, optional BCrypt hash, credential version, timestamp |
 | bank_accounts | One unique owner FK, unique generated number, THB, nonnegative numeric(19,2) balance, ACTIVE/FROZEN status, version |
-| banking_transactions | Immutable successful deposit, withdrawal, transfer, exchange and fictional-bank audit records; account FKs, unique reference, currency/counter-amount and shape constraints |
-| currency_wallets | USD/EUR balances uniquely scoped to the parent account, nonnegative fixed-precision amounts |
+| banking_transactions | Immutable successful deposit, withdrawal, transfer, exchange, savings and fictional-bank audit records; account FKs, unique reference, currency/counter-amount and shape constraints |
+| currency_wallets | USD/EUR/MMK/SGD/JPY/CNY balances uniquely scoped to the parent account, nonnegative fixed-precision amounts |
 | exchange_quotes | Owner/account, source and destination currencies, amounts, applied rate, provider/publication/fetch metadata, expiry and executed transaction reference |
 | partner_connections | Allowlisted fictional bank, own parent account, connection state and simulated THB balance; reconnect preserves funds |
 | partner_movements | Account-scoped unique client key, exact request parameters, transaction and original balance snapshots |
-| finance_entries | Owner-scoped manual income/expense amount, category, description and date |
+| finance_entries | Owner-scoped manual or recurring income/expense amount, category, description and date |
 | finance_budgets | Unique owner/month/expense-category limit |
 | savings_goals | Owner, target and bounded saved planning amount |
 
@@ -45,7 +45,7 @@ Cookies are HTTP-only and SameSite=Lax. Secure cookies are configurable for loca
 
 ## Money, transactions and locking
 
-Java BigDecimal and PostgreSQL numeric(19,2) represent balances. Amounts must be positive, within the operation limit and have at most two decimals before persistence. Foreign-exchange settlement retains the original provider ratios, rounding down only at the destination minor unit. Eight-decimal rates are approximate display values; the persisted source and destination amounts define the quote.
+Java BigDecimal and PostgreSQL numeric(19,2) represent balances. Amounts must be positive and within the operation limit; THB uses two decimals and exchange applies currency metadata (JPY zero, other supported currencies two). Foreign-exchange settlement retains the original provider ratios, rounding down only at the destination minor unit. Eight-decimal rates are approximate display values; the persisted source and destination amounts define the quote.
 
 A service transaction groups balances, successful history and retry state. An unchecked business/persistence exception rolls back the whole operation. @Transactional alone does not prevent overspending: every monetary mutation first acquires a pessimistic write lock on its parent bank_accounts row. Ordinary account-to-account transfers lock both account UUIDs in deterministic string order, reducing deadlock risk. Scalar pre-lock account lookups avoid reusing stale managed entities. The version column is an additional safeguard, not the primary concurrency mechanism.
 
@@ -59,11 +59,11 @@ NileBank transfers validate different existing accounts, source ownership, both 
 
 Partner movements similarly compare connection, direction and amount under an account-scoped key and return stored original snapshots. Fictional partner balances and NileBank balances update atomically. Initial simulated funds are granted only once per connection; reconnecting cannot reseed them. Quotes use their persisted UUID as the one-time execution identity.
 
-Deposits/withdrawals and manual tracker additions do not have idempotency keys. After an ambiguous network response, inspect history/entries before retrying them. Client pending keys live in tab memory; after reload, inspect history before beginning a fresh operation.
+Deposits/withdrawals accept optional per-account/operation retry keys; the built-in UI supplies them. Matching requests replay the persisted result, changed amounts conflict, and balance/audit/key records commit together. Manual tracker additions remain non-idempotent; inspect entries after an ambiguous response. Client pending keys live in tab memory; after reload, inspect history before beginning a fresh operation.
 
 ## Foreign exchange flow
 
-1. Refresh and quote creation request Frankfurter v2 ECB EUR-base THB/USD data over HTTPS. Only currency parameters are sent, not user information.
+1. Refresh and quote creation request Frankfurter v2 pinned official reference data over HTTPS. Only currency parameters are sent, not user information.
 2. The provider validates response shape, currencies, positive rates, common publication date and a maximum seven-day age. Timeouts or invalid/unavailable data reject new quotes with HTTP 503; no fixed fallback exists.
 3. The provider keeps the original EUR-base decimal rates for settlement, separately from approximate THB-per-unit display rates. The service calculates the received amount directly from the exact ratio, with one final downward rounding using Java currency metadata, and checks the THB-equivalent limit by cross-multiplication. It persists a 120-second quote with authoritative source/received amounts, approximate eight-decimal display rate, source, publication date and retrieval time. The network fetch occurs before acquiring the monetary account lock.
 4. Confirmation locks the owning account, checks eligibility, expiry and available funds, debits and credits the persisted amounts without recalculating them from the display rate, appends history and marks execution in one transaction.
@@ -87,3 +87,73 @@ This is a layered monolith with account balances and immutable audit history, no
 ## Source layout and build
 
 `backend/` owns Maven, Java, configuration, Flyway migrations, tests and the application Dockerfile. `frontend/` owns the unmodified HTML/CSS/ES modules. Maven resources configuration packages the sibling frontend directory into the classpath static directory, so both the packaged JAR and test server expose the same URLs as before. No generated assets are checked in. Root Compose builds with context `.` and Dockerfile `backend/Dockerfile`; the image is still one non-root Java service. CI runs a clean backend build, frontend syntax checks and the root-context image build. This refactor changes paths and packaging only; APIs, schema contents, session/CSRF behavior and transaction logic are unchanged.
+
+## External authentication
+
+V10 adds issuer/subject identity bindings to the existing internal user UUID, with
+one identity per provider per user. Password hashes are nullable for external-only
+users; those users cannot authenticate by password. Google OIDC is an optional,
+default-off Spring Security OAuth2 Client integration. The browser redirects through
+Google; code exchange and tokens stay on the server. Both login methods use the
+same UUID-based ownership model, sessions and CSRF protection. See
+[authentication design](AUTHENTICATION.md) for transaction recovery, validation,
+configuration and deployment limitations. Matching email addresses never link users.
+
+Seven-currency coverage, precision, source policy and verification: [currency guide](CURRENCIES.md).
+
+## Personal finance expansion (V13)
+
+Owner-specific categories replace hardcoded assignment constraints with composite
+foreign keys while preserving existing codes and records. Profile-insert seeding and
+upgrade backfill provide defaults. Recurring rules use a pure calendar policy and
+transactional cursor/occurrence generation, with unique tombstones preventing duplicate
+or resurrected entries. Scheduler jobs are bounded and use SKIP LOCKED for concurrent
+workers. This module never calls bank balance mutations. See
+[personal finance design](PERSONAL_FINANCE.md).
+
+## Simulated savings (V14)
+
+Savings balances are child accounts of the existing primary account, preserving its
+one-owner uniqueness. Monetary operations lock parent then child, debit/credit and
+append financial audit plus a parent-scoped retry record in one transaction. Database
+triggers protect both histories. Planning goals stay separate. See
+[savings integrity and APIs](SAVINGS.md).
+
+## Current schema and operational references
+
+V10–V15 add external identities, credential versions, seven-currency constraints,
+owned finance categories and recurring rules/occurrence tombstones, real simulated
+savings accounts/movements and immutable cash retry records. See the complete
+[migration inventory](MIGRATIONS.md). Authentication maps both local and validated
+OIDC principals to the same internal UUID; the banking model is independent of the
+login method. Cash idempotency is scoped separately from internal transfers.
+
+The [production template](DEPLOYMENT.md) remains one Spring Boot service plus
+private PostgreSQL behind an operator-provided trusted HTTPS proxy. It uses a
+non-superuser schema-owning app role, secure cookies, explicit native proxy trust,
+structured logs and bounded resources. Owning its schema permits Flyway and also
+means database audit immutability is not protection against that schema owner.
+Staging/public verification, delivery-based recovery, MFA and privacy operations
+remain external or unimplemented as recorded in [implementation status](IMPLEMENTATION_STATUS.md).
+
+## Password recovery
+
+V16 adds hashed, expiring, credential-version-bound reset records. A bounded
+in-memory worker pool performs account lookup and SMTP delivery after a generic
+request response. Reset locks the user and commits password change, token consumption
+and session revocation together. Raw links never enter the database or API responses;
+the browser consumes a fragment-only link. See [recovery design](PASSWORD_RECOVERY.md).
+Recovery is default-off and does not add local credentials to Google-only users.
+
+## Multifactor authentication
+
+V17 stores owner-bound AES-GCM authenticator seeds and hashed recovery codes. Both
+primary login paths pass through the same MFA gate. Pending authentication has only
+MFA_PENDING authority; every protected application API requires USER. After verified
+TOTP or a single-use recovery code, the session strategy rotates ID/CSRF and restores
+the original validated UUID authentication. Counters and backup-code consumption are
+serialized by user-row locks. See [MFA](MFA.md) for key lifecycle and limitations.
+
+V18 adds an optional email-confirmation timestamp and separate hashed token records.
+Confirmation binds to owner/email/version, consumes once under the user lock, and
+creates no login or external-identity binding. See [email confirmation](EMAIL_VERIFICATION.md).

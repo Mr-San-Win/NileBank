@@ -17,10 +17,19 @@ public class ExchangeController {
   }
 
   public record QuoteRequest(
-      @NotNull @Pattern(regexp = "THB|USD|EUR") String fromCurrency,
-      @NotNull @Pattern(regexp = "THB|USD|EUR") String toCurrency,
+      @NotNull @Pattern(regexp = "THB|USD|EUR|MMK|SGD|JPY|CNY") String fromCurrency,
+      @NotNull @Pattern(regexp = "THB|USD|EUR|MMK|SGD|JPY|CNY") String toCurrency,
       @NotNull @DecimalMin("0.01") @DecimalMax("1000000") @Digits(integer = 7, fraction = 2)
           BigDecimal amount) {}
+
+  public record CurrencyView(String code, int fractionDigits) {}
+
+  @GetMapping("/currencies")
+  public List<CurrencyView> currencies() {
+    return SupportedCurrency.codes().stream()
+        .map(c -> new CurrencyView(c, SupportedCurrency.scale(c)))
+        .toList();
+  }
 
   @GetMapping("/rates")
   public ExchangeService.Rates rates() {

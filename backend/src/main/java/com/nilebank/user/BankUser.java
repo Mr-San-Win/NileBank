@@ -15,8 +15,13 @@ public class BankUser {
   @Column(nullable = false, unique = true, length = 254)
   private String email;
 
-  @Column(nullable = false, length = 100)
+  @Column(length = 100)
   private String passwordHash;
+
+  @Column(nullable = false)
+  private long credentialVersion;
+
+  private Instant emailVerifiedAt;
 
   @Column(nullable = false)
   private Instant createdAt;
@@ -29,6 +34,27 @@ public class BankUser {
     this.email = email;
     this.passwordHash = passwordHash;
     this.createdAt = Instant.now();
+  }
+
+  public Instant getEmailVerifiedAt() {
+    return emailVerifiedAt;
+  }
+
+  public void verifyEmail() {
+    if (emailVerifiedAt == null) emailVerifiedAt = Instant.now();
+  }
+
+  public long getCredentialVersion() {
+    return credentialVersion;
+  }
+
+  public void changePassword(String hash) {
+    this.passwordHash = hash;
+    credentialVersion++;
+  }
+
+  public void revokeSessions() {
+    credentialVersion++;
   }
 
   public UUID getId() {

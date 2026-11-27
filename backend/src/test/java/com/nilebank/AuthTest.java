@@ -164,4 +164,30 @@ class AuthTest extends PostgresTest {
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.errors.email").exists());
   }
+
+  @Test
+  void googleIsDisabledByDefaultWithoutCredentials() throws Exception {
+    mvc.perform(get("/api/v1/auth/options"))
+        .andExpect(status().isOk())
+        .andExpect(content().json("{\"googleEnabled\":false}"));
+    mvc.perform(get("/oauth2/authorization/google")).andExpect(status().isNotFound());
+  }
+
+  @Test
+  void passwordLoginChangesTheExistingSessionId() throws Exception {
+    String email = email();
+    register(email);
+    var initial = mvc.perform(get("/api/v1/auth/csrf")).andReturn();
+    var session = (MockHttpSession) initial.getRequest().getSession();
+    String previous = session.getId();
+    var token = json.readTree(initial.getResponse().getContentAsString());
+    mvc.perform(
+            post("/api/v1/auth/login")
+                .session(session)
+                .header(token.get("headerName").asText(), token.get("token").asText())
+                .contentType("application/json")
+                .content(body(email, "Example-passphrase-21")))
+        .andExpect(status().isOk());
+    assertThat(session.getId()).isNotEqualTo(previous);
+  }
 }

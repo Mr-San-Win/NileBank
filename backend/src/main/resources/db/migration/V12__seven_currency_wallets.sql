@@ -1,0 +1,13 @@
+ALTER TABLE currency_wallets DROP CONSTRAINT currency_wallets_currency_check;
+ALTER TABLE currency_wallets ADD CONSTRAINT currency_wallets_currency_check CHECK(currency IN ('USD','EUR','MMK','SGD','JPY','CNY'));
+ALTER TABLE currency_wallets ADD CONSTRAINT wallet_jpy_precision CHECK(currency<>'JPY' OR balance=trunc(balance));
+ALTER TABLE banking_transactions DROP CONSTRAINT banking_transactions_currency_check;
+ALTER TABLE banking_transactions ADD CONSTRAINT banking_transactions_currency_check CHECK(currency IN ('THB','USD','EUR','MMK','SGD','JPY','CNY'));
+ALTER TABLE banking_transactions DROP CONSTRAINT banking_transactions_counter_currency_check;
+ALTER TABLE banking_transactions ADD CONSTRAINT banking_transactions_counter_currency_check CHECK(counter_currency IN ('THB','USD','EUR','MMK','SGD','JPY','CNY'));
+ALTER TABLE banking_transactions ADD CONSTRAINT transaction_jpy_precision CHECK((currency<>'JPY' OR amount=trunc(amount)) AND (counter_currency<>'JPY' OR counter_amount=trunc(counter_amount)));
+ALTER TABLE exchange_quotes DROP CONSTRAINT exchange_quotes_from_currency_check;
+ALTER TABLE exchange_quotes ADD CONSTRAINT exchange_quotes_from_currency_check CHECK(from_currency IN ('THB','USD','EUR','MMK','SGD','JPY','CNY'));
+ALTER TABLE exchange_quotes DROP CONSTRAINT exchange_quotes_to_currency_check;
+ALTER TABLE exchange_quotes ADD CONSTRAINT exchange_quotes_to_currency_check CHECK(to_currency IN ('THB','USD','EUR','MMK','SGD','JPY','CNY'));
+ALTER TABLE exchange_quotes ADD CONSTRAINT quote_jpy_precision CHECK((from_currency<>'JPY' OR amount=trunc(amount)) AND (to_currency<>'JPY' OR received_amount=trunc(received_amount)));

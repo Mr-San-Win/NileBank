@@ -17,16 +17,19 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/auth")
 public class AuthController {
   private final AuthService service;
+  private final com.nilebank.auth.mfa.MfaService mfa;
   private final AuthenticationManager manager;
   private final SessionAuthenticationStrategy sessions;
   private final SecurityContextRepository contexts;
 
   public AuthController(
       AuthService service,
+      com.nilebank.auth.mfa.MfaService mfa,
       AuthenticationManager manager,
       SessionAuthenticationStrategy sessions,
       SecurityContextRepository contexts) {
     this.service = service;
+    this.mfa = mfa;
     this.manager = manager;
     this.sessions = sessions;
     this.contexts = contexts;
@@ -52,21 +55,37 @@ public class AuthController {
   }
 
   @PostMapping("/login")
-  public AuthService.UserView login(
+  public org.springframework.http.ResponseEntity<?> login(
       @Valid @RequestBody Login r, HttpServletRequest request, HttpServletResponse response) {
     if (r.password().getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72) {
       throw new org.springframework.security.authentication.BadCredentialsException(
           "Invalid credentials");
     }
-    var authentication =
-        manager.authenticate(
-            UsernamePasswordAuthenticationToken.unauthenticated(r.email(), r.password()));
-    sessions.onAuthentication(authentication, request, response);
-    var context = SecurityContextHolder.createEmptyContext();
-    context.setAuthentication(authentication);
-    SecurityContextHolder.setContext(context);
-    contexts.saveContext(context, request, response);
-    return service.me(UUID.fromString(authentication.getName()));
+    org.springframework.security.core.Authentication authentication;
+    try {
+      authentication =
+          manager.authenticate(
+              UsernamePasswordAuthenticationToken.unauthenticated(r.email(), r.password()));
+    } catch (org.springframework.security.core.AuthenticationException failure) {
+      SecurityEvents.record(SecurityEvents.Event.LOGIN_FAILED, null);
+      throw failure;
+    }
+    authentication = mfa.gate(authentication);
+    synchronized (request.getSession()) {
+      sessions.onAuthentication(authentication, request, response);
+      var context = SecurityContextHolder.createEmptyContext();
+      context.setAuthentication(authentication);
+      SecurityContextHolder.setContext(context);
+      contexts.saveContext(context, request, response);
+    }
+    if (com.nilebank.auth.mfa.MfaService.pending(authentication)) {
+      SecurityEvents.record(
+          SecurityEvents.Event.MFA_REQUIRED, UUID.fromString(authentication.getName()));
+      return org.springframework.http.ResponseEntity.accepted().body(Map.of("mfaRequired", true));
+    }
+    SecurityEvents.record(SecurityEvents.Event.LOGIN, UUID.fromString(authentication.getName()));
+    return org.springframework.http.ResponseEntity.ok(
+        service.me(UUID.fromString(authentication.getName())));
   }
 
   @GetMapping("/me")

@@ -9,7 +9,8 @@ import org.springframework.http.HttpStatus;
 
 public interface ExchangeRateProvider {
   // Shared with the exchange service; extend alongside wallet/schema currency support.
-  List<String> SUPPORTED_CURRENCIES = List.of("THB", "USD", "EUR");
+  List<String> SUPPORTED_CURRENCIES = SupportedCurrency.codes();
+  List<String> LEGACY_CURRENCIES = List.of("THB", "USD", "EUR");
 
   private static ApiException invalidData() {
     return new ApiException(
@@ -21,15 +22,14 @@ public interface ExchangeRateProvider {
   }
 
   private static Map<String, BigDecimal> validated(
-      Map<String, BigDecimal> rates, boolean optional) {
+      Map<String, BigDecimal> rates, boolean optional, List<String> declared) {
     if (rates == null) throw invalidData();
     if (optional && rates.isEmpty()) return Map.of();
     for (var entry : rates.entrySet()) {
-      if (entry.getKey() == null || !SUPPORTED_CURRENCIES.contains(entry.getKey()))
-        throw invalidData();
+      if (entry.getKey() == null || !declared.contains(entry.getKey())) throw invalidData();
       positive(entry.getValue());
     }
-    if (!rates.keySet().containsAll(SUPPORTED_CURRENCIES)) throw invalidData();
+    if (!rates.keySet().containsAll(declared)) throw invalidData();
     return Map.copyOf(rates);
   }
 
@@ -46,26 +46,40 @@ public interface ExchangeRateProvider {
       LocalDate rateDate,
       Instant fetchedAt,
       Map<String, BigDecimal> thbPerUnit,
-      Map<String, BigDecimal> unitsPerEuro) {
+      Map<String, BigDecimal> unitsPerEuro,
+      List<String> currencies) {
     /** Existing normalized snapshots, including fixed fixtures, retain their exact weights. */
     public Snapshot(
         String provider,
         LocalDate rateDate,
         Instant fetchedAt,
         Map<String, BigDecimal> thbPerUnit) {
-      this(provider, rateDate, fetchedAt, thbPerUnit, Map.of());
+      this(provider, rateDate, fetchedAt, thbPerUnit, Map.of(), LEGACY_CURRENCIES);
+    }
+
+    public Snapshot(
+        String provider,
+        LocalDate rateDate,
+        Instant fetchedAt,
+        Map<String, BigDecimal> thbPerUnit,
+        Map<String, BigDecimal> unitsPerEuro) {
+      this(provider, rateDate, fetchedAt, thbPerUnit, unitsPerEuro, LEGACY_CURRENCIES);
     }
 
     public Snapshot {
-      thbPerUnit = validated(thbPerUnit, false);
-      unitsPerEuro = validated(unitsPerEuro, true);
+      if (currencies == null || currencies.isEmpty()) throw invalidData();
+      for (String currency : currencies)
+        if (currency == null || !SUPPORTED_CURRENCIES.contains(currency)) throw invalidData();
+      if (!currencies.contains("THB")
+          || new java.util.HashSet<>(currencies).size() != currencies.size()) throw invalidData();
+      currencies = List.copyOf(currencies);
+      thbPerUnit = validated(thbPerUnit, false, currencies);
+      unitsPerEuro = validated(unitsPerEuro, true, currencies);
     }
 
     public Conversion conversion(String from, String to) {
-      if (from == null
-          || to == null
-          || !SUPPORTED_CURRENCIES.contains(from)
-          || !SUPPORTED_CURRENCIES.contains(to)) throw invalidData();
+      if (from == null || to == null || !currencies.contains(from) || !currencies.contains(to))
+        throw invalidData();
       if (!unitsPerEuro.isEmpty()) {
         // Published EUR-base values are exact decimals; never normalize them before settlement.
         return new Conversion(unitsPerEuro.get(to), unitsPerEuro.get(from));

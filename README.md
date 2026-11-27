@@ -2,25 +2,29 @@
 
 A full-stack Java portfolio project demonstrating secure sessions, PostgreSQL transactions, explicit row locking, and retry-safe transfers through a responsive banking dashboard.
 
-**Educational demo only. All money is simulated (THB, USD and EUR). NileBank is not a bank, does not connect to financial institutions, and cannot process real payments. Use fictional profile information and a demo password.**
+**Educational demo only. All money is simulated (THB, USD, EUR, MMK, SGD, JPY and CNY). NileBank is not a bank, does not connect to financial institutions, and cannot process real payments. Use fictional profile information and a demo password for password registration. Optional Google Sign-In shares your Google name and email; no real banking information is required.**
 
 ![Actual NileBank dashboard](docs/screenshots/dashboard-desktop.jpg)
 
 ## Features
 
 - Register with a normalized unique email; sign in and out using server-side sessions.
+- Optional Google OpenID Connect Sign-In (disabled by default), with server-side token validation and safe internal identity mapping.
+- Manage sign-in methods, explicitly link/unlink Google, and change passwords with session revocation.
 - Create one virtual THB account, initially funded with zero.
 - Deposit simulated money, withdraw within the available balance, and transfer to another NileBank account.
 - Review a transfer before confirmation; replay the same idempotency key without moving funds again.
 - View persisted recent activity, paginated history, and account/profile details.
+- Create named simulated THB savings accounts; move funds atomically with retry keys, targets and immutable history.
 - Responsive desktop/mobile layout, keyboard-accessible forms, visible demo notices, loading and error states.
 - PostgreSQL constraints, Flyway migrations, explicit account row locks, and immutable successful-operation history.
 
 ## Exchange, demo banks and finance
 
-- Real ECB reference rates fetched via Frankfurter on refresh, with dated 120-second THB/USD/EUR exchange quotes.
+- Pinned official reference rates fetched through Frankfurter on refresh; seven-currency wallets and dated 120-second quotes. CBM covers all seven; optional ECB mode explicitly excludes MMK quotes.
 - Fictional partner-bank connections and atomic, idempotent simulated movements.
-- Manual personal finance entries, category budgets, savings goals and explainable monthly spending insights.
+- Manual income/expense entry editing and filtering, owner-defined categories, monthly budgets, planning goals and explainable spending insights.
+- Daily/weekly/monthly recurring tracker entries with bounded catch-up, pause/resume and duplicate protection; never automatic bank movements.
 
 See [extension guide and API](docs/EXTENSIONS.md) for a test walkthrough, rate freshness, consistency design and limitations.
 
@@ -61,6 +65,13 @@ The application port binds to loopback only. PostgreSQL is available only on the
 
 No preloaded login credentials exist. Register a fictional profile and create its virtual account. Add simulated funds, then create a second user/account (sign out first or use a separate browser profile) to demonstrate transfers. A normal second tab shares the same login cookie.
 
+## Optional Google Sign-In
+
+The application works without Google credentials. To enable Google, follow the
+[OAuth client setup and authentication guide](docs/AUTHENTICATION.md). Supply the
+client ID/secret only through your ignored environment and register the exact
+callback URI. No account linking or recovery shortcut is enabled by matching emails.
+
 ## Tests and development
 
 Java 21 and Docker are required for the full suite. Node.js 20+ is needed for JavaScript syntax checks, and Python 3 for the optional HTTP smoke scripts. No frontend dependencies need installation. PostgreSQL integration tests are mandatory and fail if Docker is unavailable; they are not silently skipped.
@@ -69,21 +80,39 @@ Java 21 and Docker are required for the full suite. Node.js 20+ is needed for Ja
 cd backend
 sh mvnw -B clean verify
 cd ..
-node --check frontend/app.js
-node --check frontend/extensions.js
+for file in frontend/*.js; do node --check --input-type=module < "$file"; done
+node scripts/check_currency_format.mjs
 python3 scripts/smoke.py
 python3 scripts/smoke_extensions.py
 ```
 
-PowerShell: run `.\mvnw.cmd -B clean verify` inside `backend/`. An installed Maven can run `mvn -f backend/pom.xml clean verify` from the repository root. The smoke scripts require the Docker app to be running and create fictional persisted demo records.
+PowerShell: run `.\mvnw.cmd -B clean verify` inside `backend/`. An installed Maven can run `mvn -f backend/pom.xml clean verify` from the repository root. The smoke scripts require the Docker app to be running and create fictional persisted demo records. For a real Chromium walkthrough using a disposable database, follow [the testing guide](docs/TESTING.md).
 
 Tests include registration, duplicate email, generic login errors, unauthenticated access, ownership, zero accounts, exact monetary validation, deposits/withdrawals, insufficient funds, immutable history, atomic transfers, idempotency replay/conflict, concurrent withdrawals, concurrent duplicate transfers, opposing transfers, mixed operations, CSRF rotation/logout, and a real HTTP session journey.
 
-The GitHub Actions workflow runs PostgreSQL tests through the backend Maven wrapper, checks both frontend JavaScript modules and builds the single application image. Refactor verification results are documented in [the structural refactor guide](docs/REFACTOR.md).
+The GitHub Actions workflow runs PostgreSQL tests through the backend Maven wrapper, checks every frontend JavaScript module and builds the single application image. Refactor verification results are documented in [the structural refactor guide](docs/REFACTOR.md).
 
 Observed on 30 October 2026: Java 21 `mvn -B verify` passed **56 tests, 0 failures, 0 errors, 0 skipped**, and packaged the executable JAR. The Docker build/start and database/application health checks passed. Both `python3 scripts/smoke.py` and `python3 scripts/smoke_extensions.py` passed; the former verifies the complete HTTP banking journey against Docker, including idempotent replay and cross-user ownership rejection. Browser QA verified the actual frontend on desktop and at a 390px mobile breakpoint. These are functional checks, not a performance benchmark or independent security audit.
 
+AUTH-001 authentication verification (21 November 2026): `sh mvnw -B clean verify`
+passed **112 tests, 0 failures, 0 errors, 0 skipped** on PostgreSQL 17.11
+Testcontainers. This includes the existing 97-test foundation plus real Spring OIDC
+callback tests against a local signed-token/JWKS provider. No real Google client,
+public deployment or new browser walkthrough was verified by this test run.
+
+AUTH-002 verification passed **132 tests, 0 failures, 0 errors, 0 skipped** on PostgreSQL 17.11, including account linking, credential revocation and abuse controls. See [account security](docs/ACCOUNT_SECURITY.md) for limits, default-off SMTP recovery and optional TOTP MFA.
+
+FX-002 verification passed **143 tests, 0 failures, 0 errors, 0 skipped**. The actual default provider fetch also returned all seven currencies. See [currency precision and reference-source policy](docs/CURRENCIES.md).
+
+FIN-001 verification (22 November 2026) passed **165 tests, 0 failures, 0 errors, 0 skipped**. See [personal finance and recurrence policies](docs/PERSONAL_FINANCE.md).
+
+SAVE-001 verification passed **180 tests, 0 failures, 0 errors, 0 skipped**. See [simulated savings design](docs/SAVINGS.md).
+
+BANK-001 verification (22 November 2026) passed **186 tests, 0 failures, 0 errors, 0 skipped**. See [banking retry and consistency rules](docs/BANKING_CONSISTENCY.md).
+
 For host Java development, use an independently running PostgreSQL instance and set `DB_URL`, `DB_USER`, and `DB_PASSWORD` in the process environment, then run `mvn -f backend/pom.xml spring-boot:run`. Spring Boot does not automatically load the Compose `.env` file. Use a fresh empty database so Flyway can create the schema.
+
+Final production-preparation verification passed **195 tests, 0 failures, 0 errors, 0 skipped**, including real Tomcat secure-cookie/proxy tests. The latest isolated browser walkthrough and root/production-template Compose health checks also passed. A PostgreSQL custom-format dump restored into a separate fresh QA database with matching audit-row counts. See [implementation status](docs/IMPLEMENTATION_STATUS.md) for the final checkpoint and verification boundaries.
 
 ## Repository structure
 
@@ -95,7 +124,8 @@ backend/
   src/main/resources/     configuration and Flyway migrations
   src/test/java/          unit, HTTP and PostgreSQL concurrency tests
 frontend/
-  index.html, styles.css, app.js, extensions.js
+  index.html, styles.css, app.js, extensions.js, security.js,
+  currency.js, planning.js, savings.js
 docs/                     architecture, API, setup guides and screenshots
 scripts/                  optional HTTP smoke checks
 .github/workflows/        CI
@@ -118,16 +148,19 @@ flowchart LR
   Flyway["Flyway migrations"] --> Postgres
 ```
 
-Feature packages: `auth`, `user`, `account`, `transaction`, `transfer`, `exchange`, `partner`, `finance`, `config`, and `common`. Controllers handle HTTP; services enforce business rules and transaction boundaries; repositories persist entities; DTOs define external contracts. The application serves its own static frontend, so no CORS configuration or separate frontend server is needed.
+Feature packages: `auth`, `user`, `account`, `transaction`, `transfer`, `exchange`, `partner`, `finance`, `savings`, `config`, and `common`. Controllers handle HTTP; services enforce business rules and transaction boundaries; repositories persist entities; DTOs define external contracts. The application serves its own static frontend, so no CORS configuration or separate frontend server is needed.
 
 ## Database
 
-- `app_users`: UUID, name, normalized unique email, BCrypt password hash, creation timestamp.
+- `app_users`: UUID, name, normalized unique email, optional BCrypt password hash, creation timestamp.
+- `auth_identities`: user FK, provider, validated issuer/subject uniqueness and one identity per provider per user.
 - `bank_accounts`: UUID, unique owner FK, generated unique account number, THB currency constraint, numeric(19,2) nonnegative balance, ACTIVE/FROZEN status, optimistic version, creation timestamp.
 - `banking_transactions`: UUID, type/status, positive bounded numeric amount, source/destination FKs, unique reference, timestamp, sender-scoped idempotency key.
 - currency_wallets and exchange_quotes: foreign balances, expiring agreed rates and replay-safe execution with source provenance.
 - partner_connections and partner_movements: fictional bank balances, consent/state and scoped retry keys.
-- finance_entries, finance_budgets, savings_goals: separate owner-scoped THB planning data.
+- finance_entries, finance_budgets, finance_categories, recurring rules/occurrences and savings_goals: separate owner-scoped THB planning data.
+- cash_requests: immutable per-account/operation retry records for deposits and withdrawals.
+- savings_accounts and savings_movements: actual simulated THB savings balances and immutable retry-safe movements.
 - Flyway history and a small foundation metadata table track schema/application initialization.
 
 Indexes support source/destination history by timestamp. A PostgreSQL trigger rejects updates/deletes to transaction rows. Successful operations are audited; rejected operations do not create financial history.
@@ -146,7 +179,7 @@ Every monetary change locks its account row with PostgreSQL `SELECT … FOR UPDA
 
 A service transaction debits, credits, inserts history and stores the idempotency key together. Exceptions roll all of them back. The locked source serializes same-sender requests; a unique `(source_id, idempotency_key)` constraint provides a database backstop. Matching retries return the original transaction; changed recipient/amount conflicts. Failed transfers roll back their key, so a corrected retry may reuse it.
 
-Amounts are BigDecimal throughout the backend. JSON monetary responses use decimal strings so JavaScript cannot lose precision while parsing large balances. Requests accept decimal strings and enforce at most two fractional digits, positive values, and a 1,000,000 THB operation limit.
+Amounts are BigDecimal throughout the backend. JSON monetary responses use decimal strings so JavaScript cannot lose precision while parsing large balances. Requests accept decimal strings. THB banking operations enforce at most two fractional digits, positive values and a 1,000,000 THB operation limit. FX applies the selected currency scale (JPY zero, other enabled currencies two).
 
 This is an account-balance simulator with append-only audit history, **not a production double-entry ledger**.
 
@@ -169,24 +202,58 @@ All paths start with `/api/v1`. See [API documentation](docs/API.md) for bodies,
 | POST | /transfers | Atomic idempotent transfer |
 | GET | /transactions?page=0&size=10 | Own paginated history |
 
+## Optional password recovery
+
+Default-off SMTP recovery uses generic requests and hashed, expiring, single-use links. It preserves Google-only authentication and revokes sessions after reset. Local SMTP and browser tests passed; production inbox delivery remains unverified. [Setup and security details](docs/PASSWORD_RECOVERY.md).
+
+Recovery verification passed **215 tests, 0 failures, 0 errors, 0 skipped**.
+
+MFA verification passed **239 tests, 0 failures, 0 errors, 0 skipped**. Existing banking, finance and exchange regression tests remain included.
+
+## Optional authenticator protection
+
+TOTP MFA uses encrypted seeds, one-time recovery codes and a pending-login boundary
+shared by password and Google sign-in. Enrollment is off until encryption keys are
+configured outside Git. [Setup, security and key rotation](docs/MFA.md).
+
+## Optional email confirmation
+
+Security settings can send a purpose-specific confirmation link to the profile address.
+Confirmation never creates a login, links identities, resets passwords or moves funds.
+Existing login rules are preserved. [Configuration and rollout](docs/EMAIL_VERIFICATION.md).
+
+Email-confirmation verification passed **250 tests, 0 failures, 0 errors, 0 skipped**.
+
+Google-only MFA enrollment and management are implemented through explicit recent
+Google verification. The provider must supply a validated fresh `auth_time` claim;
+normal Google login remains unchanged. [Provider setup and safeguards](docs/GOOGLE_REAUTHENTICATION.md).
+
+The final remaining-scope suite passed **258 tests, 0 failures, 0 errors, 0 skipped**.
+
+## Deployment preparation
+
+`compose.production.yaml` is a separate private single-host template with the `prod` profile, secure cookies, explicit proxy trust, environment checks, bounded resources and a non-superuser database application role. It still requires an operator-managed HTTPS proxy and external setup. [Read the runbook](docs/DEPLOYMENT.md) before using it. No public deployment has been performed; production readiness is not established.
+
 ## Screenshots and demo
 
 Screenshots were captured from the running app using fictional users and persisted simulated transactions. [Currency exchange](docs/screenshots/currency-exchange.png) · [Finance tracker](docs/screenshots/finance-tracker.png). [Mobile dashboard](docs/screenshots/dashboard-mobile.jpg). Follow [DEMO](docs/DEMO.md) for a step-by-step walkthrough.
 
 ## Limitations and future improvements
 
-One primary THB account with USD/EUR exchange wallets. Ordinary withdrawals and account-to-account transfers use THB. No password reset, email verification, MFA, rate limiting, admin UI, or self-service freeze action. Frozen state is enforced in the backend and integration tests. Sessions live in application memory and expire on restart. The UI keeps a pending transfer key in tab memory: after a reload or uncertain response, inspect history before starting a fresh transfer. Deposits/withdrawals do not have idempotency keys; an ambiguous response must be checked before retrying.
+One primary THB account with USD/EUR/MMK/SGD/JPY/CNY exchange wallets. JPY uses whole yen; other supported currencies use two decimals. Ordinary withdrawals and account-to-account transfers use THB. Optional SMTP password reset is implemented and disabled by default; real delivery must be configured and verified. Optional TOTP MFA requires an encryption key ring; Google-only enrollment uses optional recent Google verification and requires provider claim setup. Optional email confirmation is implemented without locking existing users out. No admin UI or self-service primary-account freeze action. Basic per-process authentication rate limiting is implemented; distributed abuse protection still needs a trusted ingress. Frozen state is enforced in the backend and integration tests. Sessions live in application memory and expire on restart. The UI keeps a pending transfer key in tab memory: after a reload or uncertain response, inspect history before starting a fresh transfer. Deposits and withdrawals now accept scoped retry keys; the browser retains one for the same open form. Reloading or opening a new form creates a new key, so inspect history after an uncertain response before starting again. Legacy API calls without keys remain non-idempotent.
 
 History contains successful financial operations only. The database owner could alter/disable its trigger; it is not an externally tamper-proof ledger. No independent security audit or performance benchmarks have been performed. No public deployment or real payment integrations exist.
 
-Potential improvements: rate limits and authentication abuse monitoring, recovery/MFA, stronger operational observability, more browser automation, an independently designed ledger, and reconciliation. Keep these separate from the simulator's educational claims.
+Potential improvements: rate limits and authentication abuse monitoring, additional recovery/support policy, stronger operational observability, more browser automation, an independently designed ledger, and reconciliation. Keep these separate from the simulator's educational claims.
 
 ## Further reading
 
-[Architecture](docs/ARCHITECTURE.md) · [API](docs/API.md)
+[Architecture](docs/ARCHITECTURE.md) · [API](docs/API.md) · [Testing](docs/TESTING.md) · [Migrations](docs/MIGRATIONS.md) · [Deployment preparation](docs/DEPLOYMENT.md) · [Privacy and limitations](docs/PRIVACY.md) · [Implementation status](docs/IMPLEMENTATION_STATUS.md)
 
 ## Author
 
 **San Win**  
 Software Engineering Student — KMITL, Thailand
 
+
+Operational preparation: [HTTPS, encrypted backups and health checks](docs/OPERATIONS.md).

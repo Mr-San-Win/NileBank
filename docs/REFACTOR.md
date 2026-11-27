@@ -28,6 +28,9 @@ From the root, run `mvn -f backend/pom.xml clean verify`, or enter `backend/` an
 
 The transient provider failure is an existing operational limitation: new quotes are rejected when reference rates cannot be fetched; no fixed-rate fallback was introduced. The UI subsequently displayed the real 2026-10-30 publication.
 
+The table above is a historical refactor checkpoint. Current expansion results and
+local-only publication status are in [implementation status](IMPLEMENTATION_STATUS.md).
+
 ## Repository integration
 
-The recreated repository's initial main commit is preserved as an ancestor of the refactor branch. Its LICENSE was retained, and the one-line README was combined with the existing application documentation by retaining the complete project README. The refactor and subsequent documentation cleanup were merged into main through pull requests #1 and #2. Main is the default branch and contains the complete application. No force-push or historical commit rewrite was used.
+The recreated repository's initial main commit is preserved as an ancestor of the refactor branch. Its LICENSE was retained, and the one-line README was combined with the existing application documentation by retaining the complete project README. The refactor and subsequent documentation cleanup were merged into main through pull requests #1 and #2. Main is the default branch and contains that historical application baseline. Later local completion work has not been published by this workstream. No force-push or historical commit rewrite was used.

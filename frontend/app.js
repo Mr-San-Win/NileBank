@@ -1,3 +1,10 @@
+import { createVerification } from "./verification.js";
+import { createMfa } from "./mfa.js";
+import { createRecovery } from "./recovery.js";
+import { createSavings } from "./savings.js";
+import { createPlanning } from "./planning.js";
+import { configureCurrencies, formatMoney as money } from "./currency.js";
+import { createSecurity } from "./security.js";
 import { createExtensions } from "./extensions.js";
 const $ = (selector) => document.querySelector(selector);
 const state = {
@@ -8,10 +15,29 @@ const state = {
   view: "overview",
   page: 0,
   moneyMode: "deposit",
+  securityAfterLogin: false,
   pending: null,
+  pendingCash: null,
 };
 let noticeTimer;
 const extensions=createExtensions({api,notify,money,node,getUser:()=>state.user,getAccount:()=>state.account,onMoneyChanged:async()=>{await loadAccount();if(state.view==="overview")await loadHistory(true);}});
+
+const security = createSecurity({ api, notify, node, onSignedOut: (message) => { showAuth(); notify(message); } });
+
+const planning = createPlanning({ api, notify, node, money, getUser: () => state.user });
+
+const savings = createSavings({ api, notify, node, money, getUser: () => state.user, getAccount: () => state.account, onMoneyChanged: loadAccount });
+
+const recovery = createRecovery({ api, notify, onReset: () => showAuth(), onOpenReset: () => showAuth() });
+
+const mfa = createMfa({ api, notify, node, getUser: () => state.user,
+  onSignedOut: message => { showAuth(); notify(message); },
+  onAuthenticated: async user => { state.user = user; await refreshCsrf(); await showBank(); },
+});
+
+const verification = createVerification({ api, notify, getUser: () => state.user,
+  onOpen: () => showAuth(), onComplete: () => showAuth(),
+});
 
 class ApiError extends Error {
   constructor(message, status) {
@@ -53,7 +79,7 @@ async function api(path, { method = "GET", body, key } = {}) {
     throw new ApiError(
       method === "GET"
         ? "Could not connect. Check your connection and try again."
-        : "The response was lost. Check your activity before repeating a deposit or withdrawal. A transfer can be retried safely with the same details.",
+        : "The response was lost. Keep this form open and retry with unchanged details, or check your activity before starting a new operation.",
       0,
     );
   }
@@ -109,15 +135,6 @@ async function busy(button, action) {
   }
 }
 
-// Format decimal strings for display without doing floating-point money arithmetic.
-function money(value) {
-  const [whole, fraction = ""] = String(value ?? "0").split(".");
-  return (
-    whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",") +
-    "." +
-    fraction.padEnd(2, "0").slice(0, 2)
-  );
-}
 function date(value) {
   return new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",
@@ -137,7 +154,8 @@ function amount(input) {
       400,
     );
   }
-  return value;
+  const [whole, fraction = ""] = value.split(".");
+  return whole.replace(/^0+(?=\d)/, "") + "." + fraction.padEnd(2, "0");
 }
 function node(tag, text, className) {
   const element = document.createElement(tag);
@@ -175,8 +193,17 @@ function showAuth(message = "") {
   state.user = null;
   state.account = null;
   state.pending = null;
+  state.pendingCash = null;
   state.csrf = null;
+  ["balance", "account-number", "account-status", "user-name", "avatar", "greeting"].forEach(id => $("#" + id).textContent = "—");
+  $("#profile-details").replaceChildren();
+  $("#account-dashboard").hidden = true;
   extensions.reset();
+  security.reset();
+  planning.reset();
+  savings.reset();
+  mfa.reset();
+  verification.reset();
   document.querySelectorAll("dialog[open]").forEach((dialog) => dialog.close());
   $("#bank-view").hidden = true;
   $("#auth-view").hidden = false;
@@ -222,6 +249,8 @@ async function loadAccount() {
   renderAccount();
 }
 async function showBank() {
+  recovery.close();
+  verification.close();
   clearTimeout(noticeTimer);
   $("#notice").hidden = true;
   $("#auth-view").hidden = true;
@@ -235,11 +264,13 @@ async function showBank() {
     .toUpperCase();
   $("#greeting").textContent =
     "Welcome back, " + state.user.fullName.split(/\s+/)[0] + ".";
+  configureCurrencies(await api("/exchange/currencies"));
   await loadAccount();
   await navigate("overview");
+  if (state.securityAfterLogin) { state.securityAfterLogin = false; await navigate("security"); }
 }
 async function navigate(view) {
-  if (["transfer","exchange","partners"].includes(view) && !state.account) {
+  if (["transfer","exchange","partners","savings"].includes(view) && !state.account) {
     notify("Create your virtual account first.", true);
     view = "overview";
   }
@@ -258,9 +289,12 @@ async function navigate(view) {
     transfer: "Transfer money",
     history: "Transactions",
     profile: "Account details",
+    security: "Security settings",
     exchange: "Currency exchange",
     partners: "Demo banks",
     finance: "Finance tracker",
+    planning: "Categories & recurring",
+    savings: "Savings accounts",
   }[view];
   if (view === "overview" && state.account) await loadHistory(true);
   if (view === "history") {
@@ -268,6 +302,9 @@ async function navigate(view) {
     await loadHistory();
   }
   if (view === "profile") updateProfile();
+  if (view === "security") { await security.open(); await mfa.open(); await verification.open(); }
+  if (view === "planning") await planning.open();
+  if (view === "savings") await savings.open();
   if (["exchange","partners","finance"].includes(view)) await extensions.open(view);
 }
 function renderHistory(target, transactions) {
@@ -312,6 +349,8 @@ function renderHistory(target, transactions) {
       EXCHANGE: "Currency exchange",
       BANK_IN: "Demo bank top-up",
       BANK_OUT: "Demo bank transfer",
+      SAVINGS_IN: "Moved to savings",
+      SAVINGS_OUT: "Moved from savings",
     };
     title.append(
       node(
@@ -348,7 +387,7 @@ function renderHistory(target, transactions) {
     row.append(
       node(
         "td",
-        (incoming ? "+" : "−") + " " + ({THB:"฿",USD:"$",EUR:"€"}[transaction.currency || "THB"]) + money(transaction.amount),
+        (incoming ? "+" : "−") + " " + ({THB:"฿",USD:"$",EUR:"€",MMK:"K ",SGD:"S$",JPY:"¥",CNY:"CN¥"}[transaction.currency || "THB"]) + money(transaction.amount, transaction.currency || "THB"),
         "amount" + (incoming ? " in" : ""),
       ),
     );
@@ -407,6 +446,7 @@ function openMoney(mode) {
     return;
   }
   state.moneyMode = mode;
+  state.pendingCash = null;
   const deposit = mode === "deposit";
   $("#money-heading").textContent = deposit
     ? "Add a little possibility."
@@ -423,8 +463,8 @@ function openMoney(mode) {
   $("#money-amount").focus();
 }
 
-$("#login-tab").addEventListener("click", () => authMode("login"));
-$("#register-tab").addEventListener("click", () => authMode("register"));
+$("#login-tab").addEventListener("click", () => { mfa.reset(); recovery.close(); verification.close(); authMode("login"); });
+$("#register-tab").addEventListener("click", () => { mfa.reset(); recovery.close(); verification.close(); authMode("register"); });
 $("#auth-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   setError("#auth-error");
@@ -444,9 +484,11 @@ $("#auth-form").addEventListener("submit", async (event) => {
         $("#password").value = "";
         $("#password").focus();
       } else {
-        state.user = await api("/auth/login", { method: "POST", body });
+        const result = await api("/auth/login", { method: "POST", body });
         $("#password").value = "";
         await refreshCsrf();
+        if (result.mfaRequired) { state.user = null; mfa.challenge(); return; }
+        state.user = result;
         await showBank();
       }
     } catch (error) {
@@ -514,13 +556,14 @@ $("#money-form").addEventListener("submit", async (event) => {
   setError("#money-error");
   await busy($("#money-submit"), async () => {
     try {
+      const body = { accountId: state.account.id, amount: amount($("#money-amount")) };
+      const fingerprint = JSON.stringify([state.moneyMode, body]);
+      if (state.pendingCash?.fingerprint !== fingerprint)
+        state.pendingCash = { fingerprint, key: crypto.randomUUID() };
       await api("/transactions/" + state.moneyMode, {
-        method: "POST",
-        body: {
-          accountId: state.account.id,
-          amount: amount($("#money-amount")),
-        },
+        method: "POST", body, key: state.pendingCash.key,
       });
+      state.pendingCash = null;
       $("#money-dialog").close();
       await refreshAfterSuccess(
         state.moneyMode === "deposit"
@@ -602,8 +645,30 @@ $("#next-page").addEventListener("click", async () => {
 
 async function init() {
   authMode("login");
+  const params = new URLSearchParams(location.search);
+  state.securityAfterLogin = params.get("security") === "verified";
+  if (params.has("security")) { params.delete("security"); history.replaceState(null, "", location.pathname + (params.size ? "?" + params : "") + location.hash); }
+  const googleFailure = params.get("authError") === "google";
+  if (params.has("authError")) {
+    if (params.get("authError") === "google")
+      notify("Google sign-in could not be completed. Try again or use your existing sign-in method.", true);
+    params.delete("authError");
+    history.replaceState(null, "", location.pathname + (params.size ? "?" + params : "") + location.hash);
+  }
+  try {
+    const options = await api("/auth/options");
+    recovery.configure(options.recoveryEnabled);
+    $("#google-signin").hidden = !options.googleEnabled;
+    $("#google-help").hidden = !options.googleEnabled;
+  } catch {
+    // Password sign-in remains available if optional-provider discovery fails.
+  }
   try {
     await refreshCsrf();
+    if (recovery.hasResetLink()) { recovery.openReset(); return; }
+    if (verification.hasLink()) { verification.show(); return; }
+    const factor = await api("/auth/mfa/status");
+    if (factor.required) { mfa.challenge(); return; }
     try {
       state.user = await api("/auth/me");
     } catch (error) {
@@ -611,9 +676,26 @@ async function init() {
       throw error;
     }
     await showBank();
+    if (googleFailure) notify("Google sign-in or linking could not be completed. Use your existing sign-in method.", true);
   } catch (error) {
     notify(error.message, true);
   }
 }
+$("#google-signin").addEventListener("click", (event) => {
+  const link = event.currentTarget;
+  if (link.getAttribute("aria-disabled") === "true") { event.preventDefault(); return; }
+  link.setAttribute("aria-disabled", "true");
+  link.setAttribute("aria-busy", "true");
+  link.textContent = "Connecting to Google…";
+});
+window.addEventListener("pageshow", () => {
+  const link = $("#google-signin");
+  link.removeAttribute("aria-disabled");
+  link.removeAttribute("aria-busy");
+  link.textContent = "Continue with Google";
+});
 extensions.init();
+security.init();
+planning.init();
+savings.init();
 init();

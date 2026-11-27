@@ -21,7 +21,19 @@ public class FinanceRepository {
       String category,
       BigDecimal amount,
       String description,
-      LocalDate occurredOn) {}
+      LocalDate occurredOn,
+      UUID recurringRuleId,
+      LocalDate scheduledFor) {
+    public Entry(
+        UUID id,
+        String direction,
+        String category,
+        BigDecimal amount,
+        String description,
+        LocalDate occurredOn) {
+      this(id, direction, category, amount, description, occurredOn, null, null);
+    }
+  }
 
   private Entry entry(ResultSet r, int n) throws SQLException {
     return new Entry(
@@ -30,7 +42,9 @@ public class FinanceRepository {
         r.getString("category"),
         r.getBigDecimal("amount"),
         r.getString("description"),
-        r.getObject("occurred_on", LocalDate.class));
+        r.getObject("occurred_on", LocalDate.class),
+        r.getObject("recurring_rule_id", UUID.class),
+        r.getObject("scheduled_for", LocalDate.class));
   }
 
   public Entry add(
@@ -159,5 +173,81 @@ public class FinanceRepository {
 
   public void saved(UUID id, BigDecimal amount) {
     jdbc.update("update savings_goals set saved=? where id=?", amount, id);
+  }
+
+  public Optional<Entry> ownedEntry(UUID owner, UUID id) {
+    return jdbc
+        .query(
+            "select * from finance_entries where owner_id=? and id=? for update",
+            this::entry,
+            owner,
+            id)
+        .stream()
+        .findFirst();
+  }
+
+  public void update(
+      UUID owner,
+      UUID id,
+      String direction,
+      String category,
+      BigDecimal amount,
+      String description,
+      LocalDate day) {
+    jdbc.update(
+        "update finance_entries set direction=?,category=?,amount=?,description=?,occurred_on=?"
+            + " where owner_id=? and id=?",
+        direction,
+        category,
+        amount,
+        description,
+        day,
+        owner,
+        id);
+  }
+
+  public List<Entry> entries(
+      UUID owner,
+      YearMonth month,
+      int page,
+      int size,
+      String direction,
+      String category,
+      String order) {
+    var query = filtered(owner, month, direction, category);
+    var args = new ArrayList<>(query.args());
+    args.add(size);
+    args.add((long) page * size);
+    return jdbc.query(
+        "select * from finance_entries"
+            + query.where()
+            + " order by "
+            + order
+            + " limit ? offset ?",
+        this::entry,
+        args.toArray());
+  }
+
+  public long count(UUID owner, YearMonth month, String direction, String category) {
+    var query = filtered(owner, month, direction, category);
+    return jdbc.queryForObject(
+        "select count(*) from finance_entries" + query.where(), Long.class, query.args().toArray());
+  }
+
+  private record Query(String where, List<Object> args) {}
+
+  private Query filtered(UUID owner, YearMonth month, String direction, String category) {
+    String where = " where owner_id=? and occurred_on>=? and occurred_on<?";
+    List<Object> args =
+        new ArrayList<>(List.of(owner, month.atDay(1), month.plusMonths(1).atDay(1)));
+    if (direction != null && !direction.isBlank()) {
+      where += " and direction=?";
+      args.add(direction);
+    }
+    if (category != null && !category.isBlank()) {
+      where += " and category=?";
+      args.add(category);
+    }
+    return new Query(where, args);
   }
 }

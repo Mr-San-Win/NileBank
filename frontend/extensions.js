@@ -1,10 +1,11 @@
 export function createExtensions({ api, notify, money, node, getUser, getAccount, onMoneyChanged }) {
   const $ = (selector) => document.querySelector(selector);
   let generation = 0, quote = null, pendingBank = null, connections = [], categories = null;
-  let financePage = 0, financeRequest = 0;
-  const symbols = { THB: "฿", USD: "$", EUR: "€" };
-  const label = (value) => value.toLowerCase().replaceAll("_", " ").replace(/\b\w/g, c => c.toUpperCase());
-  const cash = (value, currency = "THB") => (symbols[currency] || currency + " ") + money(value);
+  let financePage = 0, financeRequest = 0, editingEntry = null, editingEntryDirection = null, categoryLabels = {};
+  const symbols = { THB: "฿", USD: "$", EUR: "€", MMK: "K ", SGD: "S$", JPY: "¥", CNY: "CN¥" };
+  let currencyDetails = [];
+  const label = (value) => categoryLabels[value] || value.toLowerCase().replaceAll("_", " ").replace(/\b\w/g, c => c.toUpperCase());
+  const cash = (value, currency = "THB") => (symbols[currency] || currency + " ") + money(value, currency);
   const today = () => {
     const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
     return ["year", "month", "day"].map(type => parts.find(p => p.type === type).value).join("-");
@@ -27,6 +28,7 @@ export function createExtensions({ api, notify, money, node, getUser, getAccount
       await busy($(formId).querySelector('button[type="submit"], button:not([type])'), async () => {
         try { await action(); } catch (e) { error(errorId, e.message); }
       });
+      if (formId === "#finance-entry-form") $("#entry-submit").textContent = editingEntry ? "Save changes" : "Save tracker entry ↗";
     });
   }
   function option(select, text, value) { const o = node("option", text); o.value = value; select.append(o); }
@@ -41,8 +43,15 @@ export function createExtensions({ api, notify, money, node, getUser, getAccount
   function clearQuote() { quote = null; $("#fx-review").hidden = true; }
   async function loadWallets() {
     const ticket = generation;
-    const wallets = await api("/exchange/wallets");
+    const [wallets, metadata] = await Promise.all([api("/exchange/wallets"), api("/exchange/currencies")]);
     if (ticket !== generation || !getUser()) return;
+    currencyDetails = metadata;
+    for (const [id, fallback] of [["#fx-from", "THB"], ["#fx-to", "USD"]]) {
+      const select = $(id), current = select.value; select.replaceChildren();
+      for (const item of metadata) { option(select, item.code, item.code); select.lastChild.defaultSelected = item.code === fallback; }
+      select.value = current || fallback;
+    }
+    syncFxAmount();
     stats($("#fx-wallets"), wallets.map(w => [w.currency + " WALLET", cash(w.balance, w.currency), "Simulated funds"]));
   }
   async function refreshRates() {
@@ -52,8 +61,14 @@ export function createExtensions({ api, notify, money, node, getUser, getAccount
     try {
       const data = await api("/exchange/rates");
       if (ticket !== generation || !getUser()) return;
-      const text = data.rates.filter(r => r.currency !== "THB").map(r => "1 " + r.currency + " = " + money(r.thbPerUnit) + " THB").join("   ·   ");
+      const text = data.rates.filter(r => r.currency !== "THB").map(r => "1 " + r.currency + " = " + r.thbPerUnit + " THB").join("   ·   ");
       $("#fx-rate-status").textContent = text + " | " + data.provider + " | Published " + data.rateDate + " | Retrieved " + new Date(data.fetchedAt).toLocaleString() + ". Reference rates may remain unchanged until the next publication.";
+      const available = new Set(data.rates.map(rate => rate.currency));
+      for (const id of ["#fx-from", "#fx-to"]) {
+        for (const item of $(id).options) { item.disabled = !available.has(item.value); item.textContent = item.value + (item.disabled ? " (unavailable)" : ""); }
+        if ($(id).selectedOptions[0]?.disabled) $(id).value = id === "#fx-from" ? "THB" : "USD";
+      }
+      syncFxAmount();
       $("#fx-quote-button").disabled = false;
     } catch (e) {
       if (ticket !== generation) return;
@@ -63,7 +78,15 @@ export function createExtensions({ api, notify, money, node, getUser, getAccount
   }
   async function openExchange() {
     $("#fx-wallets").replaceChildren(node("p", "Loading wallets…", "muted"));
-    await Promise.all([loadWallets(), refreshRates()]);
+    await loadWallets();
+    await refreshRates();
+  }
+  function syncFxAmount() {
+    const code = $("#fx-from").value;
+    const scale = currencyDetails.find(c => c.code === code)?.fractionDigits ?? 2;
+    $("#fx-amount").pattern = scale === 0 ? "[0-9]+" : "[0-9]+([.][0-9]{1," + scale + "})?";
+    $("#fx-amount").placeholder = scale === 0 ? "0" : "0.00";
+    $("#fx-precision").textContent = code + (scale === 0 ? " uses whole units only." : " supports up to " + scale + " decimal places.");
   }
   function details(target, values) {
     target.replaceChildren(); values.forEach(([name, value]) => target.append(node("dt", name), node("dd", value)));
@@ -86,7 +109,7 @@ export function createExtensions({ api, notify, money, node, getUser, getAccount
       error("#fx-error");
       try {
         const result = await api("/exchange/quotes/" + quote.id + "/execute", { method: "POST" });
-        clearQuote(); $("#fx-form").reset();
+        clearQuote(); $("#fx-form").reset(); syncFxAmount();
         notify("Exchange completed. Reference: " + result.reference);
         try { await Promise.all([onMoneyChanged(), loadWallets()]); }
         catch { notify("Exchange completed. Refresh the page to reload balances.", true); }
@@ -158,6 +181,7 @@ export function createExtensions({ api, notify, money, node, getUser, getAccount
     const select = $("#entry-category"), prior = select.value;
     select.replaceChildren();
     (categories?.[$("#entry-direction").value === "INCOME" ? "income" : "expense"] || []).forEach(c => option(select, label(c), c));
+    if (editingEntry && editingEntryDirection === $("#entry-direction").value && prior && categoryLabels[prior] && ![...select.options].some(o => o.value === prior)) option(select, label(prior) + " (archived)", prior);
     if ([...select.options].some(o => o.value === prior)) select.value = prior;
   }
   function renderCategories(summary) {
@@ -209,7 +233,18 @@ export function createExtensions({ api, notify, money, node, getUser, getAccount
             } catch (error) { notify(error.message, true); }
           });
         });
-        action.append(remove); row.append(action); body.append(row);
+        const edit = node("button", "Edit", "text-button"); edit.type = "button";
+        edit.setAttribute("aria-label", "Edit " + label(e.category) + " entry");
+        edit.addEventListener("click", () => {
+          editingEntry = e.id; editingEntryDirection = e.direction; $("#entry-direction").value = e.direction; setEntryCategories();
+          if (![...$("#entry-category").options].some(o => o.value === e.category)) option($("#entry-category"), label(e.category) + " (archived)", e.category);
+          $("#entry-category").value = e.category; $("#entry-amount").value = e.amount;
+          $("#entry-date").value = e.occurredOn; $("#entry-description").value = e.description;
+          $("#entry-form-heading").textContent = "Edit recorded entry"; $("#entry-submit").textContent = "Save changes"; $("#entry-cancel").hidden = false;
+          $("#finance-entry-form").scrollIntoView({ block: "center" }); $("#entry-amount").focus();
+        });
+        if (e.recurringRuleId) first.append(node("small", "Scheduled entry", "small-badge"));
+        action.append(edit, remove); row.append(action); body.append(row);
       });
       table.append(body); wrapper.append(table); target.append(wrapper);
     }
@@ -232,14 +267,22 @@ export function createExtensions({ api, notify, money, node, getUser, getAccount
   }
   async function loadFinance() {
     const ticket = generation, request = ++financeRequest, month = $("#finance-month").value;
+    await api("/finance/recurring/materialize", { method: "POST" });
+    const filter = new URLSearchParams({ month, page: financePage, size: 10, sort: $("#finance-sort").value });
+    if ($("#finance-filter-direction").value) filter.set("direction", $("#finance-filter-direction").value);
+    if ($("#finance-filter-category").value) filter.set("category", $("#finance-filter-category").value);
     const [summary, entries, goals, catalog] = await Promise.all([
       api("/finance/summary?month=" + month),
-      api("/finance/entries?month=" + month + "&page=" + financePage + "&size=10"),
+      api("/finance/entries?" + filter),
       api("/finance/goals"),
-      categories ? Promise.resolve(categories) : api("/finance/categories"),
+      api("/finance/categories"),
     ]);
     if (ticket !== generation || request !== financeRequest || !getUser()) return;
-    categories = catalog;
+    categories = catalog; categoryLabels = catalog.labels || {};
+    const categoryFilter = $("#finance-filter-category"), selectedFilter = categoryFilter.value;
+    categoryFilter.replaceChildren(); option(categoryFilter, "All categories", "");
+    Object.entries(categoryLabels).forEach(([code, name]) => option(categoryFilter, name, code));
+    if (selectedFilter) categoryFilter.value = selectedFilter;
     setEntryCategories();
     const budgetSelect = $("#budget-category"), prior = budgetSelect.value; budgetSelect.replaceChildren();
     categories.expense.forEach(c => option(budgetSelect, label(c), c)); if (prior) budgetSelect.value = prior;
@@ -251,7 +294,18 @@ export function createExtensions({ api, notify, money, node, getUser, getAccount
     ]);
     renderCategories(summary); renderInsights(summary.insights); renderEntries(entries); renderGoals(goals);
   }
+  function cancelEntryEdit() {
+    editingEntry = null; editingEntryDirection = null; $("#entry-cancel").hidden = true;
+    $("#entry-form-heading").textContent = "Record income or spending";
+    $("#entry-submit").textContent = "Save tracker entry ↗";
+    $("#finance-entry-form").reset(); $("#entry-date").value = today();
+    setEntryCategories(); error("#entry-error");
+  }
   function init() {
+    $("#entry-cancel").addEventListener("click", cancelEntryEdit);
+    ["#finance-filter-direction", "#finance-filter-category", "#finance-sort"].forEach(id => $(id).addEventListener("change", () => {
+      financePage = 0; loadFinance().catch(e => notify(e.message, true));
+    }));
     $("#finance-month").value = today().slice(0, 7); $("#entry-date").value = today(); $("#entry-date").max = today();
     bind("#fx-form", "#fx-error", async () => {
       if ($("#fx-from").value === $("#fx-to").value) throw new Error("Choose two different currencies.");
@@ -259,10 +313,10 @@ export function createExtensions({ api, notify, money, node, getUser, getAccount
       const data = await api("/exchange/quotes", { method: "POST", body: { fromCurrency: $("#fx-from").value, toCurrency: $("#fx-to").value, amount: validAmount("#fx-amount") } });
       renderQuote(data);
     });
-    ["#fx-from", "#fx-to", "#fx-amount"].forEach(id => $(id).addEventListener("input", clearQuote));
+    ["#fx-from", "#fx-to", "#fx-amount"].forEach(id => $(id).addEventListener("input", () => { clearQuote(); syncFxAmount(); }));
     $("#fx-confirm").addEventListener("click", confirmExchange);
     $("#fx-refresh").addEventListener("click", () => busy($("#fx-refresh"), async () => {
-      try { await Promise.all([refreshRates(), loadWallets()]); } catch (e) { notify(e.message, true); }
+      try { await loadWallets(); await refreshRates(); } catch (e) { notify(e.message, true); }
     }));
     setInterval(() => {
       if (quote && new Date(quote.expiresAt).getTime() <= Date.now()) {
@@ -287,9 +341,10 @@ export function createExtensions({ api, notify, money, node, getUser, getAccount
     }));
     bind("#finance-entry-form", "#entry-error", async () => {
       const day = $("#entry-date").value;
-      await api("/finance/entries", { method: "POST", body: { direction: $("#entry-direction").value, category: $("#entry-category").value, amount: validAmount("#entry-amount"), description: $("#entry-description").value.trim(), occurredOn: day } });
+      const wasEditing = !!editingEntry;
+      await api("/finance/entries" + (editingEntry ? "/" + editingEntry : ""), { method: editingEntry ? "PUT" : "POST", body: { direction: $("#entry-direction").value, category: $("#entry-category").value, amount: validAmount("#entry-amount"), description: $("#entry-description").value.trim(), occurredOn: day } });
       $("#entry-amount").value = ""; $("#entry-description").value = ""; $("#finance-month").value = day.slice(0, 7);
-      financePage = 0; await loadFinance(); notify("Tracker entry saved. Bank funds were not moved.");
+      cancelEntryEdit(); financePage = 0; await loadFinance(); notify(wasEditing ? "Entry updated. Bank funds were not moved." : "Tracker entry saved. Bank funds were not moved.");
     });
     bind("#finance-budget-form", "#budget-error", async () => {
       await api("/finance/budgets", { method: "POST", body: { month: $("#finance-month").value, category: $("#budget-category").value, amount: validAmount("#budget-amount") } });
@@ -317,7 +372,8 @@ export function createExtensions({ api, notify, money, node, getUser, getAccount
     }
   }
   function reset() {
-    generation++; financeRequest++; clearQuote(); clearBankReview(); categories = null; connections = []; financePage = 0;
+    generation++; financeRequest++; clearQuote(); clearBankReview(); categories = null; categoryLabels = {}; editingEntry = null; connections = []; financePage = 0;
+    $("#entry-cancel").hidden = true; $("#entry-form-heading").textContent = "Record income or spending"; $("#entry-submit").textContent = "Save tracker entry ↗";
     ["#fx-wallets", "#partner-connections", "#finance-totals", "#finance-categories", "#finance-insights", "#finance-entries", "#finance-goals"].forEach(id => $(id).replaceChildren());
     document.querySelectorAll("#exchange-view form,#partners-view form,#finance-view form").forEach(form => form.reset());
     $("#finance-month").value = today().slice(0, 7); $("#entry-date").value = today(); $("#entry-date").max = today();
