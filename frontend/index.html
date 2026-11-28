@@ -385,6 +385,14 @@
   <div id="fx-wallets" class="summary-grid" aria-live="polite"></div>
   <div class="feature-note"><strong>Real data, simulated exchange.</strong> Rates come from a pinned central-bank source through Frankfurter (CBM by default; ECB is optional). They are published reference rates, not intraday trading prices. Refresh requests the latest publication. <a href="https://frankfurter.dev/" target="_blank" rel="noopener noreferrer">Source ↗</a></div>
   <div id="fx-rate-status" class="rate-strip" role="status">Loading latest reference rates…</div>
+  <section class="panel fx-chart-panel" aria-labelledby="fx-chart-heading">
+    <div class="panel-title fx-chart-toolbar"><div><h2 id="fx-chart-heading">Exchange rate history</h2><p class="muted">Daily published reference rates · not live trading prices</p></div>
+      <div class="fx-periods" role="group" aria-label="Chart period"><button type="button" data-fx-days="7" aria-pressed="false">7D</button><button type="button" data-fx-days="30" aria-pressed="true">1M</button><button type="button" data-fx-days="90" aria-pressed="false">3M</button></div></div>
+    <div class="fx-chart-summary"><strong id="fx-chart-rate">—</strong><span id="fx-chart-change"></span></div>
+    <p id="fx-chart-status" role="status" class="muted">Select your currencies below to explore their history.</p>
+    <div id="fx-chart-plot" class="fx-chart-plot"></div>
+    <details id="fx-chart-data" hidden><summary>View published rates as a table</summary><div class="table-wrap"><table><thead><tr><th>Date</th><th id="fx-chart-unit">Reference rate</th></tr></thead><tbody id="fx-chart-rows"></tbody></table></div></details>
+  </section>
   <div class="form-layout"><section class="panel form-panel"><h2>Get a conversion quote</h2>
     <form id="fx-form"><div class="field-pair"><div><label for="fx-from">From currency</label><select id="fx-from"><option>THB</option><option>USD</option><option>EUR</option></select></div><div><label for="fx-to">To currency</label><select id="fx-to"><option>USD</option><option>EUR</option><option>THB</option></select></div></div>
     <label for="fx-amount">Amount to exchange</label><input id="fx-amount" type="text" inputmode="decimal" pattern="[0-9]+([.][0-9]{1,2})?" required placeholder="0.00"><p class="field-help">Maximum 1,000,000 THB equivalent. No fee. Quotes last 2 minutes.</p>
