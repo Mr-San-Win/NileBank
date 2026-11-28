@@ -1,9 +1,11 @@
+import { createRateChart } from "./rate-chart.js";
 export function createExtensions({ api, notify, money, node, getUser, getAccount, onMoneyChanged }) {
   const $ = (selector) => document.querySelector(selector);
   let generation = 0, quote = null, pendingBank = null, connections = [], categories = null;
   let financePage = 0, financeRequest = 0, editingEntry = null, editingEntryDirection = null, categoryLabels = {};
   const symbols = { THB: "฿", USD: "$", EUR: "€", MMK: "K ", SGD: "S$", JPY: "¥", CNY: "CN¥" };
   let currencyDetails = [];
+  const rateChart = createRateChart({ api, getUser });
   const label = (value) => categoryLabels[value] || value.toLowerCase().replaceAll("_", " ").replace(/\b\w/g, c => c.toUpperCase());
   const cash = (value, currency = "THB") => (symbols[currency] || currency + " ") + money(value, currency);
   const today = () => {
@@ -80,6 +82,7 @@ export function createExtensions({ api, notify, money, node, getUser, getAccount
     $("#fx-wallets").replaceChildren(node("p", "Loading wallets…", "muted"));
     await loadWallets();
     await refreshRates();
+    await rateChart.load();
   }
   function syncFxAmount() {
     const code = $("#fx-from").value;
@@ -314,9 +317,10 @@ export function createExtensions({ api, notify, money, node, getUser, getAccount
       renderQuote(data);
     });
     ["#fx-from", "#fx-to", "#fx-amount"].forEach(id => $(id).addEventListener("input", () => { clearQuote(); syncFxAmount(); }));
+    ["#fx-from", "#fx-to"].forEach(id => $(id).addEventListener("change", () => void rateChart.load()));
     $("#fx-confirm").addEventListener("click", confirmExchange);
     $("#fx-refresh").addEventListener("click", () => busy($("#fx-refresh"), async () => {
-      try { await loadWallets(); await refreshRates(); } catch (e) { notify(e.message, true); }
+      try { await loadWallets(); await refreshRates(); await rateChart.load(); } catch (e) { notify(e.message, true); }
     }));
     setInterval(() => {
       if (quote && new Date(quote.expiresAt).getTime() <= Date.now()) {
@@ -372,6 +376,7 @@ export function createExtensions({ api, notify, money, node, getUser, getAccount
     }
   }
   function reset() {
+    rateChart.reset();
     generation++; financeRequest++; clearQuote(); clearBankReview(); categories = null; categoryLabels = {}; editingEntry = null; connections = []; financePage = 0;
     $("#entry-cancel").hidden = true; $("#entry-form-heading").textContent = "Record income or spending"; $("#entry-submit").textContent = "Save tracker entry ↗";
     ["#fx-wallets", "#partner-connections", "#finance-totals", "#finance-categories", "#finance-insights", "#finance-entries", "#finance-goals"].forEach(id => $(id).replaceChildren());

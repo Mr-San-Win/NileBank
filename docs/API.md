@@ -215,3 +215,12 @@ provider proof remains server-side. MFA settings additionally report `passwordRe
 and `googleVerified`. Google-only management can omit currentPassword only when
 that validated proof is present and fresh; ordinary password proof is unchanged.
 See [Google reauthentication](GOOGLE_REAUTHENTICATION.md).
+
+### Exchange history (display only)
+
+`GET /api/v1/exchange/history?from=THB&to=USD&days=30` requires a signed-in
+user and returns dated historical reference rates from the configured CBM/ECB
+source. Supported periods are 7, 30 and 90 days. Successful responses are cached
+for five minutes; gaps are actual missing publications, not fabricated rates.
+History is for charts only and never changes quotes, wallets or settlement.
+Provider failure returns a controlled error without invented fallback data.

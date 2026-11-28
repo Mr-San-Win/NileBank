@@ -15,6 +15,20 @@ import org.springframework.test.web.servlet.*;
 
 class AuthTest extends PostgresTest {
   @Test
+  void typographyAndChartAssetsLoadBeforeLogin() throws Exception {
+    for (String path :
+        new String[] {
+          "/rate-chart.js", "/assets/fonts/manrope-variable.ttf", "/assets/fonts/OFL-Manrope.txt"
+        }) mvc.perform(get(path)).andExpect(status().isOk());
+  }
+
+  @Test
+  void exchangeHistoryRequiresAuthentication() throws Exception {
+    mvc.perform(get("/api/v1/exchange/history").param("from", "USD").param("to", "THB"))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
   void oversizedUtf8PasswordIsRejectedWithoutInternalError() throws Exception {
     mvc.perform(
             post("/api/v1/auth/login")

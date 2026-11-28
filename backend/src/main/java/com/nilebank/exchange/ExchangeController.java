@@ -11,9 +11,11 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/exchange")
 public class ExchangeController {
   private final ExchangeService service;
+  private final RateHistoryService history;
 
-  public ExchangeController(ExchangeService service) {
+  public ExchangeController(ExchangeService service, RateHistoryService history) {
     this.service = service;
+    this.history = history;
   }
 
   public record QuoteRequest(
@@ -34,6 +36,14 @@ public class ExchangeController {
   @GetMapping("/rates")
   public ExchangeService.Rates rates() {
     return service.rates();
+  }
+
+  @GetMapping("/history")
+  public RateHistoryService.History history(
+      @RequestParam String from,
+      @RequestParam String to,
+      @RequestParam(defaultValue = "30") int days) {
+    return history.history(from, to, days);
   }
 
   @GetMapping("/wallets")
